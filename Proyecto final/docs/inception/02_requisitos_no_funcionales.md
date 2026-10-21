@@ -20,7 +20,7 @@
 
 ## 3. Condiciones de Extrapolación del Laboratorio a Producción
 
-Dado que el entorno de desarrollo es el **AWS Academy Learner Lab** (con límites de $100 USD de crédito, cuota restringida de vCPUs y ausencia de ciertos servicios avanzados administrados):
+Dado que el entorno de desarrollo es el **AWS Academy Learner Lab** (con límites de $50 USD de crédito, cuota restringida de vCPUs y ausencia de ciertos servicios avanzados administrados):
 1. **Factor de Escala:** El prototipo valida la corrección funcional, la precisión del NLP y la tasa de throughput por vCPU/worker con un lote de **100.000 a 1.000.000 de órdenes sintéticas**.
 2. **Modelo Matemático de Extrapolación:**
    $$\text{Throughput Total Requerido} = \frac{12.000.000\text{ órdenes}}{3 \times 3600\text{ s}} \approx 1.111,1\text{ órdenes/segundo}$$
