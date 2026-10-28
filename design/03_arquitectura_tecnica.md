@@ -8,7 +8,6 @@
 | Versión | 1.0.0 (Alineado con el Dataset Oficial COIL de 1,2M de solicitudes) |
 | Depende de | ADR-001, ADR-002, ADR-003, RF-01 a RF-05, RNF-01 a RNF-06 |
 | Decisiones nuevas | [ADR-004](adrs/ADR-004-computo-workers-lambda.md) y [ADR-005](adrs/ADR-005-almacenamiento-poliglota.md) |
-| Catálogos oficiales | [`COIL_diccionario_datos.md`](../data/ref/COIL_diccionario_datos.md), [`COIL_catalogo_servicios_cubiertos.csv`](../data/ref/COIL_catalogo_servicios_cubiertos.csv), [`COIL_catalogo_perfiles_cobertura.csv`](../data/ref/COIL_catalogo_perfiles_cobertura.csv) |
 
 ---
 
