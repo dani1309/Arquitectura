@@ -376,11 +376,11 @@ Esto garantiza que los **50 USD** del Learner Lab alcanzan holgadamente para dec
 
 ## 15. Trazabilidad de ajustes aplicados a los documentos de Inception
 
-Los tres ajustes identificados durante el diseño técnico ya fueron incorporados en la versión `1.1.0` de la carpeta [`Proyecto final/docs/inception/`](../Proyecto%20final/docs/inception/):
+Los tres ajustes identificados durante el diseño técnico ya fueron incorporados en la versión `1.1.0` de la carpeta [`docs/inception/`](../inception/):
 
-1. **[`01_requisitos_funcionales_bdd.md`](../Proyecto%20final/docs/inception/01_requisitos_funcionales_bdd.md):** Se actualizó al esquema real del dataset COIL (`CHV-0000001`, perfiles `PRIORITARIO`, `ESTANDAR`, `COPAGO`, catálogo `COV-001`..`COV-020`), se separó el rechazo sintáctico de filas (`REJECTED_SYNTAX` en `rechazos/`) de la DLQ de infraestructura en RF-01 y se especificó el JSON canónico con `modelo_version` y `patient_token` en RF-05.
-2. **[`ADR-002`](../Proyecto%20final/docs/inception/adrs/ADR-002-anonimizacion-pii-y-trazabilidad.md):** Se precisó el uso de **clave secreta** en `HMAC-SHA256`, el enmascaramiento con `#` conservando la longitud y el árbol de hashes por orden, chunk y lote.
-3. **[`02_requisitos_no_funcionales.md`](../Proyecto%20final/docs/inception/02_requisitos_no_funcionales.md) y [`ADR-003`](../Proyecto%20final/docs/inception/adrs/ADR-003-estrategia-mvp-lab-aws.md):** Se unificó el presupuesto del Learner Lab en **50 USD** y el volumen del prototipo en las **1.200.000 órdenes** de `COIL_dataset_glosas_salud_1_2M.csv` (escala exacta $1:10$).
+1. **[`01_requisitos_funcionales_bdd.md`](../inception/01_requisitos_funcionales_bdd.md):** Se actualizó al esquema real del dataset COIL (`CHV-0000001`, perfiles `PRIORITARIO`, `ESTANDAR`, `COPAGO`, catálogo `COV-001`..`COV-020`), se separó el rechazo sintáctico de filas (`REJECTED_SYNTAX` en `rechazos/`) de la DLQ de infraestructura en RF-01 y se especificó el JSON canónico con `modelo_version` y `patient_token` en RF-05.
+2. **[`ADR-002`](../inception/adrs/ADR-002-anonimizacion-pii-y-trazabilidad.md):** Se precisó el uso de **clave secreta** en `HMAC-SHA256`, el enmascaramiento con `#` conservando la longitud y el árbol de hashes por orden, chunk y lote.
+3. **[`02_requisitos_no_funcionales.md`](../inception/02_requisitos_no_funcionales.md) y [`ADR-003`](../inception/adrs/ADR-003-estrategia-mvp-lab-aws.md):** Se unificó el presupuesto del Learner Lab en **50 USD** y el volumen del prototipo en las **1.200.000 órdenes** de `COIL_dataset_glosas_salud_1_2M.csv` (escala exacta $1:10$).
 
 ---
 
