@@ -1,161 +1,171 @@
 # Especificación de Requisitos Funcionales y Escenarios BDD
-**Proyecto:** Arquitectura Distribuida en AWS para Auditoría y Adjudicación Financiera Masiva de Órdenes Médicas (Proyecto COIL - Pagador Estatal)  
+**Proyecto:** Arquitectura Distribuida en AWS para Auditoría y Adjudicación Financiera Masiva de Órdenes Médicas (Proyecto COIL - Sistema de Salud de Chernovia)  
 **Fase AI-DLC:** Inception  
-**Versión:** 1.0.0  
+**Versión:** 1.1.0 (Alineado con el Dataset Oficial COIL 1,2M y Diseño Técnico)  
 
 ---
 
-## 1. Unificación Conceptual y Reglas de Negocio
+## 1. Unificación Conceptual y Reglas de Negocio (Dataset Oficial COIL)
 
-### 1.1 Glosario de Entidades
-* **Orden Médica / Cuenta Médica:** Unidad indivisible de auditoría. Equivale a la prescripción, consulta y factura radicada por un prestador de salud (IPS) para reclamo financiero ante el pagador estatal.
-* **DNO (Documento Nacional de Operación / DNI):** Documento oficial de identidad del usuario (Cédula de Ciudadanía, DNI, Pasaporte) combinado con el Número de Identificación de Seguridad Social (NSS/BPS).
-* **Medio Emisor:** Entidad prestadora de servicios de salud (IPS / Prestador Privado o Público) con su código de habilitación y nivel de complejidad asistencial (Nivel 1 al 4).
-* **Valor del Procedimiento:** Monto monetario nominal reclamado por el emisor según la tarifa pactada o catálogo SOAT/ISS/FONASA.
-* **Perfil del Usuario (Regla de Copago y Cobertura):**
-  * **Categoría A (Vulnerabilidad Alta / Régimen Subsidiado / SISBEN A-B):** Cobertura del **100%** del valor aprobado si el medicamento/procedimiento está en el catálogo.
-  * **Categoría B (Régimen Contributivo Rango Medio / Ingresos 2-5 SMMLV):** Cobertura del **50%** (copago del 50%).
-  * **Categoría C (Régimen Contributivo Rango Alto / Ingresos > 5 SMMLV):** Cobertura del **25%** (copago del 75%).
-  * **No Asegurado / Exclusión Explícita / Sin Derechos:** Cobertura del **0%**.
+### 1.1 Esquema del Dataset Principal (`COIL_dataset_glosas_salud_1_2M.csv`)
+Cada registro representa una **Orden / Solicitud Médica** indivisible de auditoría (~300 bytes por fila) con las siguientes 6 columnas:
+* **`id_solicitud`:** Identificador único de la solicitud (ej. `CHV-0000001`).
+* **`fecha_solicitud`:** Marca temporal de recepción (`YYYY-MM-DD HH:MM:SS`, distribuida en 3 días hábiles: `2026-05-04` a `2026-05-06`).
+* **`glosa`:** Texto semiestructurado (~213 caracteres en promedio) con la información clínica y del paciente bajo la plantilla:
+  `Paciente: <nombre>; DNO: <identificador>; SeguroSocial: <identificador>; Edad: <edad>; PerfilCobertura: <perfil>; ServicioSolicitado: <servicio>; Medicacion: <med1>|<med2>|...`
+* **`medio_emisor`:** Canal de ingreso de la solicitud (`Hospital Público`, `Clínica Aliada`, `Farmacia Aliada`, `Portal Ciudadano`, `Ventanilla Física`, `App Móvil Salud`, `Call Center`).
+* **`valor_procedimiento`:** Valor monetario reclamado por el procedimiento solicitado (entero positivo).
+* **`entidad_emisora`:** Institución prestadora (IPS) que radica la solicitud (ej. `Hospital Central de Chernovia`, `Unidad de Salud Valle Claro`, `Instituto Ambulatorio Novaterra`, etc.).
+
+### 1.2 Identificadores Personales (PII) y Enmascaramiento
+* **`DNO` (Documento Nacional de Operación / Identidad):** Identificador con formato `DNO-XXXXXXXX` (ej. `DNO-23291911`).
+* **`SeguroSocial`:** Número de seguridad social con formato `SS-XXX-XX-XXXX` (ej. `SS-173-47-2763`).
+* **`patient_token`:** Pseudónimo criptográfico determinista calculado mediante `HMAC-SHA256(clave_secreta, DNO || SeguroSocial)`. En la glosa procesada, los valores de `Paciente`, `DNO` y `SeguroSocial` se reemplazan carácter por carácter con `#` (preservando la longitud exacta del texto para no alterar los desplazamientos `start_char` y `end_char` de las entidades clínicas).
+
+### 1.3 Catálogo de Servicios Cubiertos (`COIL_catalogo_servicios_cubiertos.csv`)
+Contiene los **20 servicios habilitados** (`COV-001` a `COV-020`) en el sistema público de salud de Chernovia, definiendo para cada uno:
+* `codigo_servicio`, `servicio`, `categoria`, `medicaciones_referencia` (separadas por `|` o `ninguna`), `valor_min_referencia`, `valor_max_referencia` y `cubre_sistema_publico = SI`.
+* Cualquier `ServicioSolicitado` que no figure en este catálogo (ej. *Tratamiento spa terapéutico premium*, *Ortodoncia estética avanzada*, *Blanqueamiento dental estético*, *Terapia antiedad experimental*, *Medicina alternativa no certificada*, *Programa de fertilidad premium electiva*, etc.) se dictamina como **`NO_CUBRE`**.
+
+### 1.4 Perfil de Cobertura (`COIL_catalogo_perfiles_cobertura.csv`)
+El porcentaje de liquidación cuando el servicio está cubierto depende del campo `PerfilCobertura` extraído de la glosa:
+* **`PRIORITARIO`:** Cobertura del **100%** (población prioritaria).
+* **`ESTANDAR`:** Cobertura del **50%** (cobertura parcial media para población general).
+* **`COPAGO`:** Cobertura del **25%** (cobertura parcial baja con copago extendido).
+* **Servicio `NO_CUBRE` o perfil inválido:** Cobertura del **0%** (monto aprobado = `0.00`).
 
 ---
 
 ## 2. Requisitos Funcionales y Criterios de Aceptación (BDD)
 
-### RF-01: Ingesta y Validación Estructural del Lote de Órdenes
-* **Actor:** Prestador de Servicios de Salud (IPS) / Ingestor Automático de Licitación.
-* **Descripción:** El sistema debe recibir archivos de órdenes médicas en formato semiestructurado (JSON/Parquet/CSV), validar esquema, tipología de datos, presencia de DNO, medio emisor, valor y glosa médica.
-* **Valor de Negocio:** Evitar procesar registros corruptos o incompletos que contaminen el pipeline de adjudicación.
+### RF-01: Ingesta, Particionamiento y Validación Estructural de Solicitudes
+* **Actor:** Entidad Emisora (IPS) / Particionador y Validador del Worker.
+* **Descripción:** El sistema debe recibir lotes CSV de solicitudes médicas, dividirlos en bloques (chunks) de 5.000 órdenes por rango de bytes y validar estructuralmente cada fila (`id_solicitud`, `fecha_solicitud`, `glosa`, `medio_emisor`, `valor_procedimiento > 0`, `entidad_emisora`).
+* **Aislamiento de Fallas de Datos vs. Infraestructura:** Una orden individual malformada se marca como `REJECTED_SYNTAX` y se registra en el prefijo `rechazos/` sin detener el procesamiento del resto del chunk. La *Dead Letter Queue* (DLQ) se reserva exclusivamente para fallos técnicos del chunk tras 3 reintentos.
 
 #### Escenarios BDD:
 ```gherkin
-Feature: Validación Estructural de Órdenes Médicas
+Feature: Validación Estructural de Solicitudes Médicas COIL
 
-  Scenario: Ingesta de orden médica con estructura íntegra y campos obligatorios
-    Given una orden médica recibida con ID "ORD-2026-9001"
-    And un identificador de paciente compuesto por DNO "10203040" y NSS "SS-998877"
-    And un medio emisor "IPS Universitaria - Nivel 3" con código de habilitación vigente
-    And un valor reclamado de "$150.000 COP"
-    And una glosa médica en texto libre no vacía
-    When el subsistema de ingesta procesa y valida la estructura de la orden
-    Then la orden es marcada con estado "VALIDATED"
-    And es encolada para el pipeline de anonimización y análisis NLP.
+  Scenario: Ingesta de solicitud médica con estructura íntegra y campos obligatorios
+    Given una solicitud médica recibida con id_solicitud "CHV-0000001" y fecha "2026-05-06 10:09:31"
+    And una glosa con DNO "DNO-23291911", SeguroSocial "SS-173-47-2763" y PerfilCobertura "ESTANDAR"
+    And un medio_emisor "Farmacia Aliada" y entidad_emisora "Unidad de Salud Valle Claro"
+    And un valor_procedimiento de 84617
+    When el validador del worker verifica el esquema de la fila
+    Then la solicitud es marcada con estado "VALIDATED"
+    And pasa en memoria a la etapa de pseudonimización y extracción clínica.
 
-  Scenario: Rechazo por orden malformada o campos críticos ausentes
-    Given una orden médica con ID "ORD-2026-9002" sin valor de procedimiento ni medio emisor
-    When el subsistema de ingesta valida la orden
-    Then la orden es rechazada con estado "REJECTED_SYNTAX"
-    And se genera un registro en la Dead Letter Queue (DLQ) con el detalle del campo faltante
-    And no se envía a la etapa de inferencia NLP.
+  Scenario: Aislamiento de fila malformada sin abortar el chunk
+    Given un chunk de 5000 solicitudes donde la fila "CHV-0000002" carece de valor_procedimiento o tiene glosa vacía
+    When el worker procesa el chunk
+    Then la solicitud "CHV-0000002" se marca con estado "REJECTED_SYNTAX"
+    And se escribe su detalle sin PII en el prefijo "rechazos/" de S3 curated
+    And las 4999 solicitudes restantes del chunk continúan su adjudicación normal sin enviar el mensaje a la DLQ.
 ```
 
 ---
 
-### RF-02: Extracción y Normalización de Entidades Clínicas (NLP / NER)
-* **Actor:** Motor de Procesamiento NLP Distribuido.
-* **Descripción:** A partir de la glosa médica no estructurada, extraer: paciente, edad, diagnósticos (mapeados a códigos CIE-10/11) y medicamentos con su posología y principio activo. Debe registrar los caracteres exactos de inicio y fin (`start_char`, `end_char`) dentro del texto original.
-* **Valor de Negocio:** Automatizar la comprensión clínica sin intervención humana, permitiendo auditar millones de órdenes en minutos.
+### RF-02: Pseudonimización y Extracción de Entidades Clínicas con Spans Exactos
+* **Actor:** Pseudonimizador y Extractor Clínico (NLP / NER) del Worker.
+* **Descripción:** Generar el `patient_token` con `HMAC-SHA256(clave_secreta, DNO || SeguroSocial)`, enmascarar con `#` de igual longitud los campos `Paciente`, `DNO` y `SeguroSocial` en la glosa, y extraer `Edad`, `PerfilCobertura`, `ServicioSolicitado` y la lista de `Medicacion` registrando los desplazamientos exactos de caracteres (`start_char`, `end_char`) y la confianza de extracción.
+* **Valor de Negocio:** Automatizar la lectura clínica protegiendo datos sensibles (PII) sin invalidar las posiciones de caracteres que sirven de prueba legal.
 
 #### Escenarios BDD:
 ```gherkin
-Feature: Extracción de Entidades Clínicas desde Texto Libre
+Feature: Pseudonimización y Extracción de Entidades desde la Glosa COIL
 
-  Scenario: Extracción exitosa de diagnóstico y prescripción con posología
-    Given una orden con glosa médica:
+  Scenario: Extracción exitosa de servicio, perfil y medicación conservando spans
+    Given la solicitud "CHV-0000001" con glosa:
       """
-      Paciente masculino de 58 años de edad consulta por cefalea persistente y cifras tensionales elevadas.
-      Se confirma Hipertensión esencial (CIE-10: I10).
-      Se formula Losartán 50mg cada 12 horas vía oral por 30 días.
+      Paciente: Paula Vargas Ramírez; DNO: DNO-23291911; SeguroSocial: SS-173-47-2763; Edad: 14; PerfilCobertura: ESTANDAR; ServicioSolicitado: Terapia física ambulatoria; Medicacion: acetaminofén|diclofenaco tópico|naproxeno|ciclobenzaprina
       """
-    When el modelo de NLP procesa el texto
-    Then extrae la edad "58" con span [19, 21]
-    And extrae el diagnóstico "Hipertensión esencial" con código "I10" y span [112, 133]
-    And extrae el medicamento "Losartán" con concentración "50mg" y posología "cada 12 horas vía oral por 30 días"
-    And calcula un puntaje de confianza de extracción (confidence_score) >= 0.90.
+    When el pseudonimizador y el extractor clínico procesan la glosa
+    Then se genera el patient_token HMAC-SHA256 a partir de "DNO-23291911" y "SS-173-47-2763"
+    And los valores de Paciente, DNO y SeguroSocial quedan enmascarados con "#" conservando los 238 caracteres de longitud total
+    And extrae la edad 14, el perfil "ESTANDAR" y el servicio "Terapia física ambulatoria" con sus spans exactos [start_char, end_char]
+    And extrae las 4 medicaciones ["acetaminofén", "diclofenaco tópico", "naproxeno", "ciclobenzaprina"] con sus respectivos spans
+    And registra un puntaje de confianza (confidence_score) >= 0.92.
 
-  Scenario: Detección de glosa médica ambigua o ilegible
-    Given una glosa médica con texto incoherente o abreviaturas no reconocidas: "pcte dolo rrrr ??? med xxx"
-    When el modelo de NLP procesa la glosa y no logra extraer diagnósticos con confianza mínima (>= 0.70)
-    Then la orden se etiqueta con "AUDIT_FLAG_CLINICAL_UNCERTAINTY"
-    And se marca para revisión en auditoría médica de segunda línea.
+  Scenario: Detección de glosa con incertidumbre clínica o formato alterado
+    Given una solicitud cuya glosa presenta texto truncado o confianza de extracción menor a 0.70
+    When el extractor clínico evalúa la glosa
+    Then la solicitud se etiqueta con el flag "AUDIT_FLAG_CLINICAL_UNCERTAINTY"
+    And se marca para revisión en auditoría médica humana de segunda línea.
 ```
 
 ---
 
-### RF-03: Dictamen de Cobertura contra Catálogo Normativo
-* **Actor:** Motor de Reglas Normativas del Estado (PBS / Plan de Beneficios en Salud).
-* **Descripción:** Cruzar las entidades clínicas extraídas (diagnósticos y medicamentos) contra el catálogo normativo oficial vigente para emitir dictamen binario: `CUBRE` o `NO_CUBRE`.
-* **Valor de Negocio:** Cumplimiento estricto del marco legal en salud pública, evitando pagos indebidos por tecnologías no cubiertas.
+### RF-03: Dictamen de Cobertura contra Catálogo Normativo (`COIL_catalogo_servicios_cubiertos.csv`)
+* **Actor:** Motor de Cobertura del Worker.
+* **Descripción:** Contrastar el `ServicioSolicitado` extraído contra el catálogo oficial versionado (`COIL_catalogo_servicios_cubiertos.csv`) para emitir dictamen `CUBRE` (asociando el `codigo_servicio` entre `COV-001` y `COV-020`) o `NO_CUBRE`. Adicionalmente, verificar si el `valor_procedimiento` se encuentra dentro del rango `[valor_min_referencia, valor_max_referencia]` y si la medicación corresponde a `medicaciones_referencia`.
+* **Valor de Negocio:** Evitar pagos por prestaciones estéticas, experimentales o excluidas del sistema público de salud de Chernovia.
 
 #### Escenarios BDD:
 ```gherkin
-Feature: Dictamen de Cobertura Normativa
+Feature: Dictamen de Cobertura Normativa en Chernovia
 
-  Scenario: Medicamento incluido en el catálogo oficial para la patología indicada
-    Given un diagnóstico extraído "I10" (Hipertensión esencial)
-    And un medicamento extraído "Losartán 50mg"
-    And el catálogo normativo vigente versión "2026.Q4" donde "Losartán 50mg" cubre patología "I10"
-    When el motor de reglas evalúa la pertinencia
-    Then emite un dictamen de cobertura "CUBRE"
-    And asocia la regla normativa "RULE-PBS-CARDIO-104-v2026.4".
+  Scenario: Servicio incluido en el catálogo oficial de servicios cubiertos
+    Given una solicitud con ServicioSolicitado "Control de hipertensión arterial"
+    And Medicacion extraída "losartán|enalapril"
+    And un valor_procedimiento de 124225
+    And el catálogo vigente donde "Control de hipertensión arterial" tiene código "COV-009", cubre_sistema_publico "SI" y rango [50000, 130000]
+    When el motor de cobertura evalúa la solicitud
+    Then emite dictamen "CUBRE"
+    And asocia la regla normativa "COV-009" y categoría "Crónicos".
 
-  Scenario: Medicamento cosmético o fuera de guía clínica (No cubierto)
-    Given un medicamento prescrito "Toxina Botulínica con fines cosméticos"
-    When se contrasta con el catálogo de exclusiones explícitas de la ley
-    Then emite un dictamen de cobertura "NO_CUBRE"
-    And genera la causal de glosa "GLOSA-EXCL-04: Procedimiento cosmético no amparado"
-    And fija el porcentaje de liquidación en 0%.
+  Scenario: Servicio estético o experimental no incluido en el catálogo oficial
+    Given una solicitud con ServicioSolicitado "Tratamiento spa terapéutico premium" y valor_procedimiento 903765
+    When el motor de cobertura consulta el catálogo oficial COIL
+    Then emite dictamen "NO_CUBRE"
+    And asocia la causal "GLOSA-EXCL-SERVICIO-NO-CUBIERTO"
+    And fija el porcentaje de cobertura en 0%.
 ```
 
 ---
 
 ### RF-04: Liquidación Financiera Escalonada (100%, 50%, 25%, 0%)
-* **Actor:** Módulo de Liquidación y Adjudicación Financiera.
-* **Descripción:** Calcular el monto exacto a girar al prestador aplicando la tarifa del procedimiento, el dictamen de cobertura y el perfil socioeconómico del usuario.
-* **Valor de Negocio:** Determinación precisa del flujo de caja estatal y cobro de copagos según la capacidad de pago del usuario.
+* **Actor:** Liquidador Financiero del Worker.
+* **Descripción:** Calcular el monto exacto aprobado (`valor_aprobado`) y el copago aplicando el porcentaje de `COIL_catalogo_perfiles_cobertura.csv` según `PerfilCobertura` (`PRIORITARIO` = 100%, `ESTANDAR` = 50%, `COPAGO` = 25%) cuando el dictamen es `CUBRE`, o `0%` cuando es `NO_CUBRE`, utilizando aritmética `Decimal` con dos decimales y redondeo `ROUND_HALF_UP`.
+* **Valor de Negocio:** Exactitud financiera determinista que garantiza que dos ejecuciones produzcan exactamente el mismo centavo y el mismo hash criptográfico.
 
 #### Escenarios BDD:
 ```gherkin
-Feature: Liquidación Financiera Escalonada
+Feature: Liquidación Financiera Escalonada según Perfil COIL
 
-  Scenario Outline: Cálculo del monto a girar según el perfil del usuario y cobertura
-    Given una orden médica con valor del procedimiento de <ValorReclamado>
-    And un dictamen de cobertura <Dictamen>
-    And un usuario con perfil de aseguramiento <PerfilUsuario>
-    When el motor financiero liquida la cuenta médica
-    Then el porcentaje de adjudicación asignado es <Porcentaje>%
-    And el monto liquidado a girar a la IPS es <MontoGiro>
+  Scenario Outline: Cálculo determinista del monto cubierto con ejemplos reales del dataset
+    Given una solicitud "<IdSolicitud>" con valor_procedimiento de <ValorProcedimiento>
+    And un ServicioSolicitado "<Servicio>" cuyo dictamen es "<Dictamen>"
+    And un PerfilCobertura "<Perfil>"
+    When el liquidador financiero calcula la adjudicación con precisión Decimal(18,2)
+    Then el porcentaje de cobertura aplicado es <Porcentaje>%
+    And el valor_aprobado a girar a la entidad emisora es "<ValorAprobado>"
 
     Examples:
-      | ValorReclamado | Dictamen   | PerfilUsuario    | Porcentaje | MontoGiro   |
-      | 100000         | "CUBRE"    | "CATEGORIA_A"    | 100        | 100000      |
-      | 100000         | "CUBRE"    | "CATEGORIA_B"    | 50         | 50000       |
-      | 100000         | "CUBRE"    | "CATEGORIA_C"    | 25         | 25000       |
-      | 100000         | "NO_CUBRE" | "CATEGORIA_A"    | 0          | 0           |
-      | 100000         | "CUBRE"    | "NO_ASEGURADO"   | 0          | 0           |
+      | IdSolicitud | Servicio                            | ValorProcedimiento | Dictamen   | Perfil      | Porcentaje | ValorAprobado |
+      | CHV-0000001 | Terapia física ambulatoria          | 84617              | CUBRE      | ESTANDAR    | 50         | 42308.50      |
+      | CHV-0000002 | Suministro de antihipertensivos     | 53874              | CUBRE      | PRIORITARIO | 100        | 53874.00      |
+      | CHV-0000004 | Tratamiento spa terapéutico premium | 903765             | NO_CUBRE   | PRIORITARIO | 0          | 0.00          |
+      | CHV-0000005 | Medicina alternativa no certificada | 661684             | NO_CUBRE   | COPAGO      | 0          | 0.00          |
+      | CHV-0000006 | Hemograma completo                  | 49134              | CUBRE      | PRIORITARIO | 100        | 49134.00      |
 ```
 
 ---
 
-### RF-05: Trazabilidad Inmutable y Bitácora de Evidencias
-* **Actor:** Subsistema de Auditoría y Cumplimiento Legal.
-* **Descripción:** Cada decisión de adjudicación debe registrar una firma criptográfica SHA-256 compuesta por: ID de orden, versión del catálogo normativo, reglas disparadas, spans de texto utilizados y monto resultante.
-* **Valor de Negocio:** Respaldo blindado ante auditorías de la Contraloría, Procuraduría o demandas de los prestadores.
+### RF-05: Trazabilidad Criptográfica Inmutable y Árbol de Hashes por Chunk y Lote
+* **Actor:** Generador de Recibo y Escritor Idempotente del Worker.
+* **Descripción:** Serializar cada decisión en **JSON canónico** (llaves ordenadas alfabéticamente, sin espacios en blanco, codificación UTF-8, montos formateados con dos decimales) incluyendo `id_solicitud`, `patient_token`, `catalogo_version`, `modelo_version`, `regla_ids`, `spans`, `perfil_cobertura`, `porcentaje`, `valor_procedimiento` y `valor_aprobado`, y calcular su `hash_decision` SHA-256. Al cierre del chunk, calcular la raíz hash del chunk (`raiz_hash_chunk`).
+* **Valor de Negocio:** Respaldo probatorio inmutable verificable por cualquier ente de control en tres niveles (orden, chunk y lote).
 
 #### Escenarios BDD:
 ```gherkin
-Feature: Trazabilidad Criptográfica Inmutable
+Feature: Trazabilidad Criptográfica Inmutable sobre JSON Canónico
 
-  Scenario: Generación del recibo de adjudicación con sustento textual
-    Given una orden médica liquidada exitosamente con ID "ORD-2026-9001"
-    And las reglas aplicadas "RULE-PBS-CARDIO-104-v2026.4" y "RULE-COPAGO-CAT-B"
-    And los caracteres de soporte en la glosa original [112..133] y [147..155]
-    When se consolida el registro de auditoría
-    Then el sistema genera un paquete de auditoría JSON que contiene:
-      | Campo            | Valor                                      |
-      | order_id         | ORD-2026-9001                              |
-      | rule_ids         | ["RULE-PBS-CARDIO-104-v2026.4", "RULE-B"]  |
-      | text_spans       | [{"start": 112, "end": 133}, {"start": 147, "end": 155}] |
-      | adjudication_hash| SHA-256 inmutable de la decisión          |
-    And almacena el registro en un almacenamiento WORM o tabla con versionamiento inmutable.
+  Scenario: Generación de recibo firmado y verificación de integridad
+    Given la solicitud "CHV-0000001" liquidada con dictamen "CUBRE", regla "COV-005" y valor_aprobado "42308.50"
+    And catalogo_version "COIL-2026.1" y modelo_version "coil-ner-v1.0"
+    When el generador de recibo construye el JSON canónico de la decisión
+    Then calcula el hash_decision SHA-256 de 64 caracteres hexadecimales
+    And persiste el recibo en el almacenamiento de auditoría (WORM) y la fila en formato Parquet para la tabla Iceberg
+    And cualquier modificación posterior de un solo centavo o carácter produce un hash distinto y es detectada en la verificación.
 ```

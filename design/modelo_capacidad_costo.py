@@ -1,20 +1,21 @@
-"""Dimensionamiento (teoría de colas M/M/c) y costo diario del diseño propuesto."""
+"""Dimensionamiento (teoría de colas M/M/c) y costo diario del diseño propuesto (Dataset Oficial COIL)."""
 import math
 
 ORDENES_DIA = 12_000_000
+ORDENES_PROTOTIPO = 1_200_000  # COIL_dataset_glosas_salud_1_2M.csv (escala 1:10)
 CHUNK = 5_000
 MARGEN = 1.25
 
 # Precios de lista us-east-1 (verificados oct-2026 en páginas oficiales salvo donde se indica)
 LAMBDA_GBS_X86 = 0.0000166667
-LAMBDA_GBS_ARM = 0.0000133334  # 20 % menos que x86 (no visible en la captura de la página)
+LAMBDA_GBS_ARM = 0.0000133334  # 20 % menos que x86
 LAMBDA_MEM_GB = 1.769           # 1.769 MB equivalen a 1 vCPU
 LAMBDA_REQ = 0.20 / 1e6
 FARGATE_VCPU_H = 0.0404784
 FARGATE_GB_H = 0.004446
 DDB_RRU = 0.125 / 1e6
 DDB_WRU = 0.625 / 1e6
-SQS_REQ = 0.40 / 1e6           # precio estándar conocido, no visible en la captura
+SQS_REQ = 0.40 / 1e6
 S3_PUT = 0.005 / 1000
 S3_GET = 0.0004 / 1000
 S3_GB_MES = 0.023
@@ -74,31 +75,33 @@ items = {
     "API Gateway REST (12 llamadas por lote)": lotes * 12 * APIGW_REST,
     "SQS (3 req por mensaje + sondeo largo)": ((lotes + chunks) * 3 + 2 * 5 * 86_400 / 20) * SQS_REQ,
     "S3 PUT/GET operativos": (lotes + 3 * chunks) * S3_PUT + (chunks * 2) * S3_GET,
-    "DynamoDB padrón (BatchGet, 0,5 RRU/ítem)": ORDENES_DIA * 0.5 * DDB_RRU,
     "DynamoDB control de lotes (~4 WRU/chunk)": chunks * 4 * DDB_WRU,
     "Athena MERGE + OPTIMIZE (~5 GB/día)": 5 / 1024 * ATHENA_TB,
     "Step Functions (96 ejecuciones x 12 transiciones)": 96 * 12 * SFN_TRANS,
     "S3 almacenamiento incremental (18 GB/día, prorrateo mensual)": 18 * S3_GB_MES / 30,
 }
-total = 0
+total_coil = sum(items.values())
 for k_, v in items.items():
-    total += v
     print(f"  {k_:<62} ${v:8.4f}")
-print(f"  {'TOTAL DÍA':<62} ${total:8.2f}")
-print(f"  Costo por orden: ${total/ORDENES_DIA:.8f}  (por millón: ${total/ORDENES_DIA*1e6:.2f})")
-print(f"  Mensual (30 días): ${total*30:,.0f}")
+print(f"  {'SUBTOTAL (Perfil en glosa + catálogo S3 ref en memoria)':<62} ${total_coil:8.2f}")
+padron_ddb = ORDENES_DIA * 0.5 * DDB_RRU
+total_con_padron = total_coil + padron_ddb
+print(f"  {'+ Opcional: DynamoDB padrón externo (BatchGet, 0,5 RRU/ítem)':<62} ${padron_ddb:8.4f}")
+print(f"  {'TOTAL CON PADRÓN EXTERNO':<62} ${total_con_padron:8.2f}")
+print(f"  Costo por millón (sin padrón DDB / con padrón DDB): ${total_coil/ORDENES_DIA*1e6:.2f} / ${total_con_padron/ORDENES_DIA*1e6:.2f}")
+print(f"  Mensual 30 días (sin padrón DDB / con padrón DDB): ${total_coil*30:,.0f} / ${total_con_padron*30:,.0f}")
 
 print("\n=== Sensibilidad del ahorro a la tasa de revisión manual ===")
-MANUAL = 0.80  # línea base del RNF-03, pendiente de fuente
-nube = total / ORDENES_DIA
+MANUAL = 0.80  # línea base del RNF-03
+nube = total_coil / ORDENES_DIA
 for f in (0.02, 0.05, 0.10, 0.20, 0.30, 0.35):
     costo = nube + f * MANUAL
     print(f"  revisión manual {f:>4.0%}: costo efectivo ${costo:.4f}/orden  ahorro {1 - costo/MANUAL:.1%}")
 print(f"  Umbral de f para ahorro >= 70 %: {0.30 - nube/MANUAL:.4f}")
 
-print("\n=== Prototipo Learner Lab (1M órdenes) ===")
-for k in (25, 100):
-    for conc in (5, 10):
-        t = 1_000_000 / (k * conc) / 60
-        c = 1_000_000 / k * LAMBDA_MEM_GB * LAMBDA_GBS_ARM
-        print(f"  k={k:>3}, concurrencia {conc:>2}: throughput {k*conc:>4}/s  tiempo {t:6.1f} min  cómputo ${c:.2f}")
+print(f"\n=== Prototipo Learner Lab ({ORDENES_PROTOTIPO:,} órdenes de COIL_dataset_glosas_salud_1_2M.csv) ===")
+for k in (25, 100, 400):
+    for c in (5, 10):
+        t_min = ORDENES_PROTOTIPO / (k * c) / 60
+        costo = ORDENES_PROTOTIPO / k * LAMBDA_MEM_GB * LAMBDA_GBS_ARM
+        print(f"  k={k:>3}, concurrencia {c:>2}: throughput {k*c:>4}/s  tiempo {t_min:6.1f} min  cómputo ${costo:.2f}")

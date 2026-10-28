@@ -1,6 +1,6 @@
 # ADR-003: Estrategia de Prototipo en AWS Learner Lab y Extrapolación de Capacidad a Escala de Producción
 **Estado:** Aprobado  
-**Fecha:** 2026-10-21  
+**Fecha:** 2026-10-21 (Actualizado 2026-10-27 con Dataset COIL 1,2M y Presupuesto $50 USD)  
 **Decisores:** Equipo de Arquitectura Proyecto COIL  
 **Fase:** Inception  
 
@@ -8,51 +8,43 @@
 
 ## 1. Contexto y Enunciado del Problema
 
-El proyecto tiene dos realidades operativas que deben conciliarse con rigor metodológico:
-1. **La Propuesta Teórica de Licitación (Target de Producción):** Procesamiento de 12.000.000 de órdenes médicas en menos de 24 horas (o ventana de 3 horas a 1.111 órdenes/s), requiriendo clústeres masivos de cómputo distribuido (ej. EMR con decenas de instancias Graviton, data lakehouse con Apache Iceberg y data warehouse en Redshift).
-2. **El Entorno de Validación Práctica (Entregable 3 - Prototipo Funcional):** La plataforma de despliegue y evaluación es el **AWS Academy Learner Lab**, que impone límites estrictos de presupuesto ($100 USD totales), cuotas de vCPU limitadas y restricciones en el aprovisionamiento de clústeres pesados de EMR o instancias de GPU dedicadas para modelos fundacionales LoRA.
-
-Intentar correr los 12 millones de registros en el laboratorio provocaría el agotamiento inmediato de créditos y el bloqueo de la cuenta del laboratorio, imposibilitando la entrega de evidencias.
+El proyecto debe responder a dos escalas complementarias:
+1. **Meta de Licitación (Producción):** Procesar **12.000.000 de órdenes médicas diarias** en menos de 24 horas ($\ge 138,9\text{ órdenes/s}$) o en una ventana concentrada de 3 horas ($\ge 1.111,1\text{ órdenes/s}$).
+2. **Entorno de Demostración (Entregable 3 - Prototipo en AWS Academy Learner Lab):** El laboratorio dispone de un presupuesto total de **$\$50\text{ USD}$**, exige utilizar el rol preconfigurado `LabRole` y restringe la creación de clústeres pesados (EMR, Fargate o instancias grandes). Por su parte, el dataset oficial entregado para el proyecto (`COIL_dataset_glosas_salud_1_2M.csv`) contiene **1.200.000 solicitudes médicas** (~360 MB), lo que equivale exactamente a **1/10 del volumen diario de producción**.
 
 ---
 
 ## 2. Alternativas Evaluadas
 
-### Alternativa A: Intentar ejecutar la arquitectura completa de producción en el Lab
-* **Descripción:** Levantar clústeres de EMR, Redshift Serverless y modelos LLM pesados en el Learner Lab.
-* **Riesgo:** Alto riesgo de fallo catastrófico (exceder límite presupuestario de $100 USD, cuotas denegadas por AWS y fallo en la entrega del proyecto).
+### Alternativa A: Aprovisionar Clústeres Pesados Permanentes (EMR / Redshift / EC2 grandes)
+* **Riesgo:** Bloqueo inmediato por políticas de IAM del Learner Lab o agotamiento acelerado de los $\$50\text{ USD}$ de crédito por recursos encendidos en reposo.
 
-### Alternativa B: Prototipo Simulado únicamente en Local (Mocks)
-* **Descripción:** Correr simulaciones en la máquina de desarrollo sin usar los servicios de AWS.
-* **Riesgo:** Incumple el requisito formal de la rúbrica (el prototipo debe correr en la plataforma del laboratorio de AWS y demostrar métricas reales).
+### Alternativa B: Simulación Puramente Local sin Despliegue en Nube
+* **Riesgo:** Incumple el requisito de ejecutar el prototipo sobre servicios reales de AWS.
 
-### Alternativa C: Estrategia Prototipo MVP Escalable en Lab + Modelo Formal de Extrapolación a 12M — **SELECCIONADA**
+### Alternativa C: Prototipo Cloud-Native Serverless sobre el Dataset Oficial de 1,2M (Escala 1:10) + Extrapolación $M/M/c$ a 12M — **SELECCIONADA**
 * **Descripción:**
-  1. **En el AWS Learner Lab (MVP Práctico):**
-     * Desplegar la arquitectura núcleo utilizando servicios permitidos y costo-eficientes: S3 (Data Lake), AWS Lambda / ECS Fargate o AWS Glue / PySpark local en una instancia EC2 optimizada.
-     * Ejecutar un pipeline de prueba con un dataset sintético representativo de **100.000 a 1.000.000 de órdenes médicas**.
-     * Utilizar un modelo NLP optimizado y cuantizado (ej. spaCy / Transformers ligeros en ONNX o fine-tuned RoBERTa-médico cuantizado en CPU) para garantizar el **F1-score $\ge 0,92$**.
-     * Medir el throughput unitario ($\text{órdenes/segundo/vCPU}$), el consumo de memoria y el costo real en centavos de dólar.
-  2. **En el Documento de Licitación (Escalamiento Teórico a 12M):**
-     * Demostrar matemáticamente que la arquitectura escala horizontalmente de manera lineal:
-       $$\text{Nodos Teóricos} = \frac{\text{Throughput Meta (1.111 ops/s)}}{\text{Throughput Medido en Prototipo por Nodo}} \times 1,25$$
-     * Extrapolar el costo de producción utilizando AWS Pricing Calculator para instancias Spot Graviton3/4 y almacenamiento en S3 Standard + Glacier.
+  1. **Ejecución Real sobre 1,2M de Solicitudes (240 chunks de 5.000 órdenes):**
+     * Utilizar servicios serverless disponibles en el Learner Lab que escalan a cero cuando no hay carga: **Amazon S3, Amazon SQS, AWS Lambda (Arm), Amazon DynamoDB on-demand, AWS Step Functions, Amazon Athena (Apache Iceberg) y Amazon CloudWatch**.
+     * Procesar el archivo oficial `COIL_dataset_glosas_salud_1_2M.csv` junto con `COIL_catalogo_servicios_cubiertos.csv` y `COIL_catalogo_perfiles_cobertura.csv` con concurrencia controlada ($c \le 10$ workers en el laboratorio), consumiendo menos de **$\$0,35\text{ USD}$** por corrida completa.
+  2. **Medición Empírica y Extrapolación con Teoría de Colas ($M/M/c$):**
+     * Medir en el prototipo el rendimiento real $k$ ($\text{órdenes/segundo/vCPU}$) y el $F_1\text{-score}$ de extracción clínica.
+     * Con el valor empírico de $k$, calcular mediante `modelo_capacidad_costo.py` el número exacto de workers $N$, el factor de utilización $\rho$, el tiempo de espera en cola $W_q$ (fórmula C de Erlang) y el costo diario para las **12.000.000 de órdenes** de la licitación.
 
 ---
 
 ## 3. Decisión
 
 Se adopta la **Alternativa C**:
-* El prototipo de laboratorio se concentrará en validar **integridad funcional, BDD, precisión NLP ($\ge 0,92$) y trazabilidad criptográfica** sobre un lote representativo de órdenes sintéticas (100k a 1M).
-* El cumplimiento de la meta de los 12 millones y la reducción del 70% de costos se demostrará mediante una memoria de cálculo basada en las métricas de rendimiento observadas en el prototipo.
+* Validar el prototipo procesando las **1.200.000 órdenes del dataset oficial COIL** en servicios serverless compatibles con `LabRole` y presupuesto de **$\$50\text{ USD}$**.
+* Sustentar la escala de 12M mediante el modelo matemático $M/M/c$ alimentado con el throughput unitario $k$ medido en las pruebas.
 
 ---
 
 ## 4. Consecuencias y Compensaciones
 
 * **Positivas:**
-  * Garantiza la viabilidad económica y técnica dentro del saldo del Learner Lab.
-  * Proporciona evidencia empírica real (logs, métricas de CloudWatch, matrices de confusión) para el Entregable 3.
-  * Cumple plenamente con la exigencia del profesor de tener una metodología rigurosa y defendible.
+  * Costo cero en reposo (escala a cero), protegiendo los $\$50\text{ USD}$ del laboratorio.
+  * El factor de escala entre el dataset oficial (1,2M) y la meta de licitación (12M) es exactamente $1:10$, lo que hace la extrapolación directa, transparente y auditable.
 * **Negativas / Mitigaciones:**
-  * El evaluador podría cuestionar la extrapolación si no está bien sustentada. Mitigación: Documentar curvas de escalabilidad empíricas y benchmarks de latencia por etapa.
+  * El laboratorio limita la concurrencia de Lambda y algunas funciones administrativas de S3 (como Object Lock); si `LabRole` restringe Object Lock en el bucket de auditoría, el prototipo activa S3 Versioning con política de denegación de borrado y verifica la inmutabilidad mediante el árbol de hashes SHA-256.
