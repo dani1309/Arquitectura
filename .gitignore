@@ -2,3 +2,10 @@ __pycache__/
 *.pyc
 .DS_Store
 
+
+# Dataset oficial COIL de 1,2M (~360 MB): no se versiona, se obtiene aparte
+**/COIL_dataset_glosas_salud_1_2M.csv
+
+# AI-DLC: cursor y ajustes locales por usuario
+**/aidlc/active-space
+**/aidlc.settings.local.json
