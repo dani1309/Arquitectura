@@ -23,6 +23,7 @@ Registro de las decisiones del proyecto. La tabla de la sección 1 solo contiene
 | 2026-10-28 | Alinear los entregables y el paso 1 del README con el enunciado | f18c57d | naochow |
 | 2026-10-28 | Ignorar `desktop.ini` de Windows | e89eaf5 | naochow |
 | 2026-10-28 | Integrar la reorganización en `main` | b83909c, merge del PR #1 | naochow |
+| 2026-11-09 | Resolver P-01 a P-17 del plan. Los flags de valor y medicación no cambian el dictamen, el extractor es un parser determinista con confianza como dato, `valor_copago` es siempre la diferencia con `valor_aprobado`, el perfil inválido liquida 0 % con flag propio, la meta del laboratorio es 0,50 USD o menos por millón, el SLA de la corrida de 1,2 M es 2,4 h, el F1 se mide sobre 300 glosas etiquetadas más 300 perturbadas fuera de git, el prototipo consolida una vez al final sin Step Functions, las raíces usan concatenación ordenada de hashes con SHA-256 y T4b se descarta | [Plan de construcción, sección 7](../plan/04_plan_construccion.md) | Equipo |
 
 Notas sobre las fechas. ADR-001, ADR-002 y ADR-003 indican una actualización el 2026-10-27, que coincide con el commit 41218ad. ADR-004 y ADR-005 también dicen "Actualizado 2026-10-27". `aidlc/spaces/default/memory/project.md` registra otras fechas para ADR-002, ADR-004 y ADR-005, y esa diferencia queda como pregunta P-11 en el [plan de construcción](../plan/04_plan_construccion.md).
 

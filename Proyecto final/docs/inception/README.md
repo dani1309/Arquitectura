@@ -1,6 +1,7 @@
 # Documentación de Fase: Inception
 **Proyecto:** Arquitectura Distribuida en AWS para Auditoría y Adjudicación Financiera Masiva de Órdenes Médicas (Sistema de Salud de Chernovia)  
 **Entorno:** Licitación Proyecto COIL (Target 12M órdenes) + Prototipo AWS Academy Learner Lab ($50 USD, Dataset Oficial 1,2M)  
+**Equipo:** Naomi Chow, Daniel Lopez y María Fernanda Toro  
 **Metodología:** AI-DLC (AWS Labs)  
 
 ---

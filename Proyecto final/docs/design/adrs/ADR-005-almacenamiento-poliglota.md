@@ -4,7 +4,8 @@
 | :--- | :--- |
 | Estado | Aprobado |
 | Fecha | 2026-10-21 (Actualizado 2026-10-27 con Dataset Oficial COIL) |
-| Fase | Construction, diseño de infraestructura |
+| Fase | Paso 3, Arquitectura, diseño de infraestructura |
+| Equipo | Naomi Chow, Daniel Lopez y María Fernanda Toro |
 | Relacionado | ADR-002 (privacidad y trazabilidad), [03_arquitectura_tecnica.md](../03_arquitectura_tecnica.md) |
 
 ---
@@ -45,4 +46,4 @@ El bucket de evidencia se separa de Iceberg a propósito. El mantenimiento de Ic
 
 **Positivas.** Cada patrón usa el servicio que lo resuelve con menor costo. El estado del lote para la entidad emisora es inmediato desde DynamoDB, resolver el perfil en memoria con el catálogo oficial ahorra 0,75 USD diarios (12 M de lecturas menos), las consultas analíticas cuestan centavos con Athena y particionamiento por día, y los snapshots de Iceberg más los recibos en WORM permiten reconstruir cualquier decisión.
 
-**Negativas y mitigaciones.** La tabla analítica tiene hasta 15 minutos de retraso respecto al procesamiento, lo que es aceptable porque el SLA es diario. La coherencia entre los tres almacenes se garantiza con `id_solicitud` y `hash_decision` como claves comunes y con la verificación de la sección 7.4 del documento de arquitectura. Si el Learner Lab no permite Object Lock, el prototipo usa versionado y una política que niega el borrado de versiones, y la integridad se demuestra con la cadena de hashes.
+**Negativas y mitigaciones.** La tabla analítica tiene hasta 15 minutos de retraso respecto al procesamiento, lo que es aceptable porque el SLA es diario. La coherencia entre los tres almacenes se garantiza con `id_solicitud` y `hash_decision` como claves comunes y con la verificación de la sección 7.4 del documento de arquitectura. Si el Learner Lab no permite Object Lock, el prototipo usa versionado y una política que niega el borrado de versiones, y la integridad se demuestra con la cadena de hashes. Glue Data Catalog se verifica en la tarea T2 del plan y, si no está disponible, T6 se omite.

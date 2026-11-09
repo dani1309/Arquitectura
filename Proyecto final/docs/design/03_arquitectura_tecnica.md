@@ -4,7 +4,8 @@
 | :--- | :--- |
 | Proyecto | Arquitectura distribuida en AWS para auditoría y adjudicación masiva de órdenes médicas (Proyecto COIL · Sistema de Salud de Chernovia) |
 | Entregable | 2, Diseño técnico (diagrama y justificación) |
-| Fase AI-DLC | Construction, diseño de infraestructura |
+| Fase AI-DLC | Paso 3, Arquitectura, diseño de infraestructura |
+| Equipo | Naomi Chow, Daniel Lopez y María Fernanda Toro |
 | Versión | 1.0.0 (Alineado con el Dataset Oficial COIL de 1,2M de solicitudes) |
 | Depende de | ADR-001, ADR-002, ADR-003, RF-01 a RF-05, RNF-01 a RNF-06 |
 | Decisiones nuevas | [ADR-004](adrs/ADR-004-computo-workers-lambda.md) y [ADR-005](adrs/ADR-005-almacenamiento-poliglota.md) |
@@ -29,7 +30,7 @@ La inspección del conjunto de datos oficial (`COIL_dataset_glosas_salud_1_2M.cs
 | **S-02** | Formato y esquema del archivo de entrada | **Verificado:** CSV UTF-8 con 6 columnas (`id_solicitud`, `fecha_solicitud`, `glosa`, `medio_emisor`, `valor_procedimiento`, `entidad_emisora`) | El particionador busca saltos de línea `\n` tras la cabecera CSV y emite rangos de bytes exactos para bloques de 5.000 filas |
 | **S-03** | Tamaño medio por orden y longitud de glosa | **Verificado:** ~300 bytes por fila CSV (~360 MB / 1,2M filas) y ~213 caracteres por glosa | Un chunk de 5.000 órdenes pesa ~1,5 MB en CSV, muy cómodo para lectura por rango en Lambda |
 | **S-04** | Meta exigente de ventana de 3 horas (1.111 órdenes/s) frente a 24 horas (139 órdenes/s) | **Mantenido:** El diseño dimensiona ambos escenarios en la sección 8 | Cubre tanto flujo continuo como cierre concentrado de jornada |
-| **S-05** | Región `us-east-1` y presupuesto de **50 USD** del Learner Lab | **Verificado:** 1,2M órdenes = 240 chunks, costo < 0,30 USD por corrida en Lambda Arm | Permite ejecutar el dataset completo de 1,2M en el laboratorio |
+| **S-05** | Región `us-east-1` y presupuesto de **50 USD** del Learner Lab | **Verificado:** 1,2M órdenes = 240 chunks, costo estimado < 0,30 USD por corrida en Lambda Arm. La meta del laboratorio es 0,50 USD o menos por millón de órdenes | Permite ejecutar el dataset completo de 1,2M en el laboratorio |
 
 ---
 
@@ -75,10 +76,10 @@ El worker es el corazón del sistema y reproduce, dentro de una sola invocación
 | **Lector y validador** | Lee el rango de bytes CSV del chunk desde `saom-raw` y valida cada solicitud (`id_solicitud`, `fecha_solicitud`, `glosa`, `medio_emisor`, `valor_procedimiento`, `entidad_emisora`) con `pydantic` | Una fila inválida se marca `REJECTED_SYNTAX` y se escribe en `rechazos/`, pero el resto del chunk continúa sin ir a la DLQ (RF-01) |
 | **Pseudonimizador** | Extrae `Paciente`, `DNO` y `SeguroSocial` de la glosa, calcula `patient_token = HMAC-SHA256(clave_secreta, DNO‖SeguroSocial)` y enmascara esos tres valores en la glosa | El enmascaramiento **conserva la longitud exacta** (cada carácter se reemplaza por `#`), de modo que los desplazamientos `start_char` y `end_char` de todas las entidades siguen siendo idénticos contra la glosa original |
 | **Extractor clínico** | Extrae de la glosa `Edad`, `PerfilCobertura`, `ServicioSolicitado` y la lista de `Medicacion` (separada por `|`) con sus respectivos `[start_char, end_char]` y puntaje de confianza | El modelo/extractor viaja dentro de la imagen de contenedor y su versión (`modelo_version`) entra al JSON canónico del hash de decisión |
-| **Resolutor de perfil** | Cruza el `PerfilCobertura` extraído (`PRIORITARIO`, `ESTANDAR`, `COPAGO`) contra `COIL_catalogo_perfiles_cobertura.csv` en memoria (con soporte opcional para validar contra DynamoDB si hay padrón externo) | Asigna 100 % a `PRIORITARIO`, 50 % a `ESTANDAR`, 25 % a `COPAGO` y 0 % si el perfil no es válido |
+| **Resolutor de perfil** | Cruza el `PerfilCobertura` extraído (`PRIORITARIO`, `ESTANDAR`, `COPAGO`) contra `COIL_catalogo_perfiles_cobertura.csv` en memoria (con soporte opcional para validar contra DynamoDB si hay padrón externo) | Asigna 100 % a `PRIORITARIO`, 50 % a `ESTANDAR`, 25 % a `COPAGO` y 0 % si el perfil no es válido. En ese caso el dictamen depende del servicio. Si el perfil falta en la glosa se marca `AUDIT_FLAG_CLINICAL_UNCERTAINTY`, y si viene escrito pero no está en el catálogo se marca solo `AUDIT_FLAG_PERFIL_DESCONOCIDO` |
 | **Motor de cobertura** | Cruza `ServicioSolicitado` con `COIL_catalogo_servicios_cubiertos.csv` (`COV-001` a `COV-020`), emite `CUBRE` o `NO_CUBRE` con `codigo_servicio` y verifica el rango `[valor_min_referencia, valor_max_referencia]` y `medicaciones_referencia` | Los catálogos son datos versionados en `saom-ref`, no código cableado; la versión (`catalogo_version`) queda fijada al radicar el lote |
 | **Liquidador** | Si `dictamen == CUBRE`, aplica el porcentaje del perfil (100, 50 o 25 %) a `valor_procedimiento`; si es `NO_CUBRE`, aprueba `0.00` | Usa `Decimal` con dos decimales y redondeo fijo (`ROUND_HALF_UP`), nunca `float`, porque cualquier diferencia de punto flotante alteraría el hash SHA-256 |
-| **Generador de recibo** | Serializa la decisión en JSON canónico y calcula `hash_decision` (SHA-256); al cerrar el chunk calcula `raiz_hash_chunk` | Ver definición exacta del JSON canónico y árbol de hashes en la sección 7.4 |
+| **Generador de recibo** | Serializa la decisión en JSON canónico y calcula `hash_decision` (SHA-256); al cerrar el chunk calcula `raiz_hash_chunk` | Ver definición exacta del JSON canónico y concatenación ordenada de hashes con SHA-256 en la sección 7.4 |
 | **Escritor idempotente** | Escribe Parquet en staging, recibos en el bucket WORM y marca el chunk como `COMPLETADO` en DynamoDB | Claves de S3 deterministas y `TransactWriteItems` condicional en DynamoDB; reprocesar un chunk nunca duplica filas ni sumas |
 
 ---
@@ -196,8 +197,8 @@ Alineada con las columnas del dataset oficial COIL y los requisitos de trazabili
 | `catalogo_version`, `modelo_version` | string | Versiones inmutables usadas en la evaluación |
 | `perfil_cobertura` | string | `PRIORITARIO`, `ESTANDAR` o `COPAGO` |
 | `porcentaje` | int | `100`, `50`, `25` o `0` |
-| `valor_procedimiento`, `valor_aprobado`, `valor_copago` | decimal(18,2) | Calculados con `Decimal` y `ROUND_HALF_UP` |
-| `flags` | array de string | Por ejemplo `AUDIT_FLAG_CLINICAL_UNCERTAINTY` o `VALOR_FUERA_RANGO_REF` |
+| `valor_procedimiento`, `valor_aprobado`, `valor_copago` | decimal(18,2) | Calculados con `Decimal` y `ROUND_HALF_UP`. Siempre `valor_copago = valor_procedimiento - valor_aprobado` |
+| `flags` | array de string | Por ejemplo `AUDIT_FLAG_CLINICAL_UNCERTAINTY`, `AUDIT_FLAG_VALOR_FUERA_RANGO_REF` o `AUDIT_FLAG_MEDICACION_NO_REFERENCIA`. Los dos últimos no cambian el dictamen |
 | `hash_decision` | string | SHA-256 en hexadecimal (64 caracteres) |
 
 El `MERGE` solo inserta las solicitudes que aún no existen (`WHEN NOT MATCHED THEN INSERT`), lo que lo hace repetible.
@@ -243,7 +244,9 @@ Todas las cifras de esta sección y de la sección 11 salen de [`modelo_capacida
 Tres lecturas importantes salen de la tabla:
 1. La espera en cola es de segundos o de un minuto, despreciable frente a un SLA de horas, de modo que la restricción real es mantener $\rho < 1$ con margen y no el tiempo de espera.
 2. El escenario más exigente (56 workers) está muy por debajo del límite de 1.250 invocaciones concurrentes por mapeo SQS y Lambda alcanza esa concurrencia en el primer minuto.
-3. Como la glosa del dataset oficial COIL sigue una estructura semiestructurada consistente (`Paciente: ...; DNO: ...; SeguroSocial: ...; Edad: ...; PerfilCobertura: ...; ServicioSolicitado: ...; Medicacion: ...`), el extractor híbrido (parser léxico con spans + validación NER) supera fácilmente $k \ge 400\text{ órdenes/s/vCPU}$, reduciendo el tiempo de servicio por chunk de 5.000 órdenes a menos de 13 segundos.
+3. Como la glosa del dataset oficial COIL sigue una estructura semiestructurada consistente (`Paciente: ...; DNO: ...; SeguroSocial: ...; Edad: ...; PerfilCobertura: ...; ServicioSolicitado: ...; Medicacion: ...`), el extractor (parser determinista sobre la plantilla) podría alcanzar $k \ge 400\text{ órdenes/s/vCPU}$, lo que reduciría el tiempo de servicio por chunk de 5.000 órdenes a menos de 13 segundos. Este valor es una hipótesis que se mide en la tarea T4 del plan.
+
+El modelo $M/M/c$ aplica a la ingesta de 24 h. En la ventana de 3 h importa el tiempo de drenaje de la cola y no $W_q$.
 
 ### 8.2 Parámetros operativos derivados
 
@@ -271,7 +274,7 @@ Tres lecturas importantes salen de la tabla:
 | Falla de una zona de disponibilidad | S3, DynamoDB, SQS y Lambda son servicios regionales que replican en varias AZ |
 | El catálogo cambia durante un lote | La versión (`catalogo_version`) queda fijada al radicar el lote |
 | Falla la consolidación | El staging persiste y la siguiente ejecución repite el `MERGE`, que es idempotente |
-| Baja confianza de extracción (< 0,70) o valor atípico | Se agrega flag en `flags` (`AUDIT_FLAG_CLINICAL_UNCERTAINTY`) para revisión de segunda línea |
+| Falta o es inválido un campo clínico (salvo `PerfilCobertura` escrito fuera del catálogo, ver sección 5) o valor atípico | Por el campo clínico se agrega en `flags` `AUDIT_FLAG_CLINICAL_UNCERTAINTY` para revisión de segunda línea, y por el valor atípico se agrega `AUDIT_FLAG_VALOR_FUERA_RANGO_REF` |
 
 ---
 
@@ -333,6 +336,8 @@ Correr el dataset completo `COIL_dataset_glosas_salud_1_2M.csv` (1.200.000 solic
 - Con $k = 100\text{ órdenes/s/vCPU}$: **20,0 minutos** y **0,28 USD** de cómputo.
 - Con $k = 25\text{ órdenes/s/vCPU}$: **80,0 minutos** y **1,13 USD** de cómputo.
 
+Estos valores son estimaciones. La meta del laboratorio es 0,50 USD o menos por millón de órdenes (RNF-03).
+
 Esto garantiza que los **50 USD** del Learner Lab alcanzan holgadamente para decenas de pruebas completas.
 
 ---
@@ -344,8 +349,8 @@ Esto garantiza que los **50 USD** del Learner Lab alcanzan holgadamente para dec
 | Volumen de datos | **1.200.000 solicitudes** (`COIL_dataset_glosas_salud_1_2M.csv`, 240 chunks) | **12.000.000 solicitudes diarias** (2.400 chunks, factor exacto $10\times$) |
 | Concurrencia de workers | 5 a 10 invocaciones concurrentes | Entre 1 y 56 según $k$ y ventana (sección 8) |
 | Roles IAM | `LabRole` compartido | Un rol de mínimo privilegio por función |
-| Inmutabilidad WORM | Object Lock si `LabRole` lo permite; si no, S3 Versioning + política `DenyDelete` + árbol de hashes SHA-256 | S3 Object Lock en modo `COMPLIANCE` |
-| Programación del consolidador | EventBridge / Step Functions con `LabRole` o disparo al completar los 240 chunks | EventBridge Scheduler cada 15 minutos |
+| Inmutabilidad WORM | Object Lock si `LabRole` lo permite; si no, S3 Versioning + política `DenyDelete` + concatenación ordenada de hashes con SHA-256 | S3 Object Lock en modo `COMPLIANCE` |
+| Programación del consolidador | Una sola consolidación al completar los 240 chunks, sin Step Functions | EventBridge Scheduler cada 15 minutos |
 
 ---
 
@@ -366,7 +371,7 @@ Esto garantiza que los **50 USD** del Learner Lab alcanzan holgadamente para dec
 
 | ID | Riesgo o pregunta | Estado / Mitigación |
 | :--- | :--- | :--- |
-| **R-01** | Permisos de `LabRole` sobre S3 Object Lock, ECR y concurrencia de Lambda en el Learner Lab | Mitigado: Si `LabRole` restringe Object Lock o ECR, el worker puede desplegarse como paquete ZIP en Lambda Python 3.12 con S3 Versioning + árbol de hashes SHA-256 |
+| **R-01** | Permisos de `LabRole` sobre S3 Object Lock, ECR y concurrencia de Lambda en el Learner Lab | Mitigado: Si `LabRole` restringe Object Lock o ECR, el worker puede desplegarse como paquete ZIP en Lambda Python 3.12 con S3 Versioning + concatenación ordenada de hashes con SHA-256 |
 | **R-02** | El rendimiento $k$ del extractor define $N$ y el costo | Se mide directamente procesando `COIL_dataset_glosas_salud_1_2M.csv` |
 | **R-03** | Origen del perfil del usuario | **Cerrado:** Confirmado en `COIL_diccionario_datos.md`; viene en la glosa (`PRIORITARIO`, `ESTANDAR`, `COPAGO`) y se cruza con `COIL_catalogo_perfiles_cobertura.csv` |
 | **R-04** | Conflictos de commit por escrituras simultáneas en Iceberg | Mitigado: Los workers solo escriben archivos Parquet independientes por `chunk_id` en staging y un único consolidador ejecuta `MERGE INTO` |
@@ -379,7 +384,7 @@ Esto garantiza que los **50 USD** del Learner Lab alcanzan holgadamente para dec
 Los tres ajustes identificados durante el diseño técnico ya fueron incorporados en la versión `1.1.0` de la carpeta [`docs/inception/`](../inception/):
 
 1. **[`01_requisitos_funcionales_bdd.md`](../inception/01_requisitos_funcionales_bdd.md):** Se actualizó al esquema real del dataset COIL (`CHV-0000001`, perfiles `PRIORITARIO`, `ESTANDAR`, `COPAGO`, catálogo `COV-001`..`COV-020`), se separó el rechazo sintáctico de filas (`REJECTED_SYNTAX` en `rechazos/`) de la DLQ de infraestructura en RF-01 y se especificó el JSON canónico con `modelo_version` y `patient_token` en RF-05.
-2. **[`ADR-002`](../inception/adrs/ADR-002-anonimizacion-pii-y-trazabilidad.md):** Se precisó el uso de **clave secreta** en `HMAC-SHA256`, el enmascaramiento con `#` conservando la longitud y el árbol de hashes por orden, chunk y lote.
+2. **[`ADR-002`](../inception/adrs/ADR-002-anonimizacion-pii-y-trazabilidad.md):** Se precisó el uso de **clave secreta** en `HMAC-SHA256`, el enmascaramiento con `#` conservando la longitud y la concatenación ordenada de hashes con SHA-256 por orden, chunk y lote.
 3. **[`02_requisitos_no_funcionales.md`](../inception/02_requisitos_no_funcionales.md) y [`ADR-003`](../inception/adrs/ADR-003-estrategia-mvp-lab-aws.md):** Se unificó el presupuesto del Learner Lab en **50 USD** y el volumen del prototipo en las **1.200.000 órdenes** de `COIL_dataset_glosas_salud_1_2M.csv` (escala exacta $1:10$).
 
 ---

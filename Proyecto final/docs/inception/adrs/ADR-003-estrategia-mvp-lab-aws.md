@@ -2,6 +2,7 @@
 **Estado:** Aprobado  
 **Fecha:** 2026-10-21 (Actualizado 2026-10-27 con Dataset COIL 1,2M y Presupuesto $50 USD)  
 **Decisores:** Equipo de Arquitectura Proyecto COIL  
+**Equipo:** Naomi Chow, Daniel Lopez y María Fernanda Toro  
 **Fase:** Inception  
 
 ---
@@ -25,8 +26,8 @@ El proyecto debe responder a dos escalas complementarias:
 ### Alternativa C: Prototipo Cloud-Native Serverless sobre el Dataset Oficial de 1,2M (Escala 1:10) + Extrapolación $M/M/c$ a 12M — **SELECCIONADA**
 * **Descripción:**
   1. **Ejecución Real sobre 1,2M de Solicitudes (240 chunks de 5.000 órdenes):**
-     * Utilizar servicios serverless disponibles en el Learner Lab que escalan a cero cuando no hay carga: **Amazon S3, Amazon SQS, AWS Lambda (Arm), Amazon DynamoDB on-demand, AWS Step Functions, Amazon Athena (Apache Iceberg) y Amazon CloudWatch**.
-     * Procesar el archivo oficial `COIL_dataset_glosas_salud_1_2M.csv` junto con `COIL_catalogo_servicios_cubiertos.csv` y `COIL_catalogo_perfiles_cobertura.csv` con concurrencia controlada ($c \le 10$ workers en el laboratorio), consumiendo menos de **$\$0,35\text{ USD}$** por corrida completa.
+     * Utilizar servicios serverless disponibles en el Learner Lab que escalan a cero cuando no hay carga: **Amazon S3, Amazon SQS, AWS Lambda (Arm), Amazon DynamoDB on-demand, Amazon Athena (Apache Iceberg) y Amazon CloudWatch**. La consolidación se hace una sola vez al final, sin Step Functions.
+     * Procesar el archivo oficial `COIL_dataset_glosas_salud_1_2M.csv` junto con `COIL_catalogo_servicios_cubiertos.csv` y `COIL_catalogo_perfiles_cobertura.csv` con concurrencia controlada ($c \le 10$ workers en el laboratorio), con un consumo estimado menor a **$\$0,35\text{ USD}$** por corrida completa y una meta de $\le \$0,50\text{ USD}$ por millón de órdenes.
   2. **Medición Empírica y Extrapolación con Teoría de Colas ($M/M/c$):**
      * Medir en el prototipo el rendimiento real $k$ ($\text{órdenes/segundo/vCPU}$) y el $F_1\text{-score}$ de extracción clínica.
      * Con el valor empírico de $k$, calcular mediante `modelo_capacidad_costo.py` el número exacto de workers $N$, el factor de utilización $\rho$, el tiempo de espera en cola $W_q$ (fórmula C de Erlang) y el costo diario para las **12.000.000 de órdenes** de la licitación.
@@ -47,4 +48,4 @@ Se adopta la **Alternativa C**:
   * Costo cero en reposo (escala a cero), protegiendo los $\$50\text{ USD}$ del laboratorio.
   * El factor de escala entre el dataset oficial (1,2M) y la meta de licitación (12M) es exactamente $1:10$, lo que hace la extrapolación directa, transparente y auditable.
 * **Negativas / Mitigaciones:**
-  * El laboratorio limita la concurrencia de Lambda y algunas funciones administrativas de S3 (como Object Lock); si `LabRole` restringe Object Lock en el bucket de auditoría, el prototipo activa S3 Versioning con política de denegación de borrado y verifica la inmutabilidad mediante el árbol de hashes SHA-256.
+  * El laboratorio limita la concurrencia de Lambda y algunas funciones administrativas de S3 (como Object Lock); si `LabRole` restringe Object Lock en el bucket de auditoría, el prototipo activa S3 Versioning con política de denegación de borrado y verifica la inmutabilidad mediante la concatenación ordenada de hashes con SHA-256.

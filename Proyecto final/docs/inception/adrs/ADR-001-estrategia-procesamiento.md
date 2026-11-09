@@ -2,6 +2,7 @@
 **Estado:** Aprobado  
 **Fecha:** 2026-10-21 (Actualizado 2026-10-27 con Dataset COIL)  
 **Decisores:** Equipo de Arquitectura Proyecto COIL  
+**Equipo:** Naomi Chow, Daniel Lopez y María Fernanda Toro  
 **Fase:** Inception  
 
 ---

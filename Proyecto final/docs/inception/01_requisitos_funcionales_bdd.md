@@ -1,5 +1,6 @@
 # Especificación de Requisitos Funcionales y Escenarios BDD
 **Proyecto:** Arquitectura Distribuida en AWS para Auditoría y Adjudicación Financiera Masiva de Órdenes Médicas (Proyecto COIL - Sistema de Salud de Chernovia)  
+**Equipo:** Naomi Chow, Daniel Lopez y María Fernanda Toro  
 **Fase AI-DLC:** Inception  
 **Versión:** 1.1.0 (Alineado con el Dataset Oficial COIL 1,2M y Diseño Técnico)  
 
@@ -57,9 +58,9 @@ Feature: Validación Estructural de Solicitudes Médicas COIL
     And pasa en memoria a la etapa de pseudonimización y extracción clínica.
 
   Scenario: Aislamiento de fila malformada sin abortar el chunk
-    Given un chunk de 5000 solicitudes donde la fila "CHV-0000002" carece de valor_procedimiento o tiene glosa vacía
+    Given un chunk de 5000 solicitudes donde la fila "CHV-9999999" carece de valor_procedimiento o tiene glosa vacía
     When el worker procesa el chunk
-    Then la solicitud "CHV-0000002" se marca con estado "REJECTED_SYNTAX"
+    Then la solicitud "CHV-9999999" se marca con estado "REJECTED_SYNTAX"
     And se escribe su detalle sin PII en el prefijo "rechazos/" de S3 curated
     And las 4999 solicitudes restantes del chunk continúan su adjudicación normal sin enviar el mensaje a la DLQ.
 ```
@@ -67,8 +68,8 @@ Feature: Validación Estructural de Solicitudes Médicas COIL
 ---
 
 ### RF-02: Pseudonimización y Extracción de Entidades Clínicas con Spans Exactos
-* **Actor:** Pseudonimizador y Extractor Clínico (NLP / NER) del Worker.
-* **Descripción:** Generar el `patient_token` con `HMAC-SHA256(clave_secreta, DNO || SeguroSocial)`, enmascarar con `#` de igual longitud los campos `Paciente`, `DNO` y `SeguroSocial` en la glosa, y extraer `Edad`, `PerfilCobertura`, `ServicioSolicitado` y la lista de `Medicacion` registrando los desplazamientos exactos de caracteres (`start_char`, `end_char`) y la confianza de extracción.
+* **Actor:** Pseudonimizador y Extractor Clínico (parser determinista) del Worker.
+* **Descripción:** Generar el `patient_token` con `HMAC-SHA256(clave_secreta, DNO || SeguroSocial)`, enmascarar con `#` de igual longitud los campos `Paciente`, `DNO` y `SeguroSocial` en la glosa, y extraer `Edad`, `PerfilCobertura`, `ServicioSolicitado` y la lista de `Medicacion` registrando los desplazamientos exactos de caracteres (`start_char`, `end_char`) y la confianza de extracción. El extractor es un parser determinista. La confianza se calcula como campos válidos / 7 y se guarda como dato. La orden recibe `AUDIT_FLAG_CLINICAL_UNCERTAINTY` si falta o es inválido `Edad`, `ServicioSolicitado` o `Medicacion`, o si `PerfilCobertura` falta en la glosa. Si `PerfilCobertura` viene escrito pero no está en el catálogo, se marca solo `AUDIT_FLAG_PERFIL_DESCONOCIDO`.
 * **Valor de Negocio:** Automatizar la lectura clínica protegiendo datos sensibles (PII) sin invalidar las posiciones de caracteres que sirven de prueba legal.
 
 #### Escenarios BDD:
@@ -82,13 +83,13 @@ Feature: Pseudonimización y Extracción de Entidades desde la Glosa COIL
       """
     When el pseudonimizador y el extractor clínico procesan la glosa
     Then se genera el patient_token HMAC-SHA256 a partir de "DNO-23291911" y "SS-173-47-2763"
-    And los valores de Paciente, DNO y SeguroSocial quedan enmascarados con "#" conservando los 238 caracteres de longitud total
+    And los valores de Paciente, DNO y SeguroSocial quedan enmascarados con "#" conservando los 235 caracteres de longitud total
     And extrae la edad 14, el perfil "ESTANDAR" y el servicio "Terapia física ambulatoria" con sus spans exactos [start_char, end_char]
     And extrae las 4 medicaciones ["acetaminofén", "diclofenaco tópico", "naproxeno", "ciclobenzaprina"] con sus respectivos spans
-    And registra un puntaje de confianza (confidence_score) >= 0.92.
+    And registra un puntaje de confianza (confidence_score) de 1.0, correspondiente a 7 campos válidos de 7.
 
   Scenario: Detección de glosa con incertidumbre clínica o formato alterado
-    Given una solicitud cuya glosa presenta texto truncado o confianza de extracción menor a 0.70
+    Given una solicitud cuya glosa no trae PerfilCobertura o tiene ausente o inválido alguno de los campos Edad, ServicioSolicitado o Medicacion
     When el extractor clínico evalúa la glosa
     Then la solicitud se etiqueta con el flag "AUDIT_FLAG_CLINICAL_UNCERTAINTY"
     And se marca para revisión en auditoría médica humana de segunda línea.
@@ -98,7 +99,7 @@ Feature: Pseudonimización y Extracción de Entidades desde la Glosa COIL
 
 ### RF-03: Dictamen de Cobertura contra Catálogo Normativo (`COIL_catalogo_servicios_cubiertos.csv`)
 * **Actor:** Motor de Cobertura del Worker.
-* **Descripción:** Contrastar el `ServicioSolicitado` extraído contra el catálogo oficial versionado (`COIL_catalogo_servicios_cubiertos.csv`) para emitir dictamen `CUBRE` (asociando el `codigo_servicio` entre `COV-001` y `COV-020`) o `NO_CUBRE`. Adicionalmente, verificar si el `valor_procedimiento` se encuentra dentro del rango `[valor_min_referencia, valor_max_referencia]` y si la medicación corresponde a `medicaciones_referencia`.
+* **Descripción:** Contrastar el `ServicioSolicitado` extraído contra el catálogo oficial versionado (`COIL_catalogo_servicios_cubiertos.csv`) para emitir dictamen `CUBRE` (asociando el `codigo_servicio` entre `COV-001` y `COV-020`) o `NO_CUBRE`. Adicionalmente, verificar si el `valor_procedimiento` se encuentra dentro del rango `[valor_min_referencia, valor_max_referencia]` y si la medicación corresponde a `medicaciones_referencia`. Estas dos verificaciones solo agregan los flags `AUDIT_FLAG_VALOR_FUERA_RANGO_REF` y `AUDIT_FLAG_MEDICACION_NO_REFERENCIA` y no cambian el dictamen.
 * **Valor de Negocio:** Evitar pagos por prestaciones estéticas, experimentales o excluidas del sistema público de salud de Chernovia.
 
 #### Escenarios BDD:
@@ -114,6 +115,14 @@ Feature: Dictamen de Cobertura Normativa en Chernovia
     Then emite dictamen "CUBRE"
     And asocia la regla normativa "COV-009" y categoría "Crónicos".
 
+  Scenario: Valor y medicación fuera de referencia no cambian el dictamen
+    Given una solicitud con ServicioSolicitado "Control de hipertensión arterial" y valor_procedimiento 150000
+    And Medicacion extraída "ibuprofeno"
+    And el catálogo vigente donde ese servicio tiene rango [50000, 130000] y no incluye "ibuprofeno" en medicaciones_referencia
+    When el motor de cobertura evalúa la solicitud
+    Then emite dictamen "CUBRE"
+    And agrega los flags "AUDIT_FLAG_VALOR_FUERA_RANGO_REF" y "AUDIT_FLAG_MEDICACION_NO_REFERENCIA".
+
   Scenario: Servicio estético o experimental no incluido en el catálogo oficial
     Given una solicitud con ServicioSolicitado "Tratamiento spa terapéutico premium" y valor_procedimiento 903765
     When el motor de cobertura consulta el catálogo oficial COIL
@@ -126,7 +135,7 @@ Feature: Dictamen de Cobertura Normativa en Chernovia
 
 ### RF-04: Liquidación Financiera Escalonada (100%, 50%, 25%, 0%)
 * **Actor:** Liquidador Financiero del Worker.
-* **Descripción:** Calcular el monto exacto aprobado (`valor_aprobado`) y el copago aplicando el porcentaje de `COIL_catalogo_perfiles_cobertura.csv` según `PerfilCobertura` (`PRIORITARIO` = 100%, `ESTANDAR` = 50%, `COPAGO` = 25%) cuando el dictamen es `CUBRE`, o `0%` cuando es `NO_CUBRE`, utilizando aritmética `Decimal` con dos decimales y redondeo `ROUND_HALF_UP`.
+* **Descripción:** Calcular el monto exacto aprobado (`valor_aprobado`) y el copago aplicando el porcentaje de `COIL_catalogo_perfiles_cobertura.csv` según `PerfilCobertura` (`PRIORITARIO` = 100%, `ESTANDAR` = 50%, `COPAGO` = 25%) cuando el dictamen es `CUBRE`, o `0%` cuando es `NO_CUBRE`, utilizando aritmética `Decimal` con dos decimales y redondeo `ROUND_HALF_UP`. El copago se calcula siempre como `valor_copago = valor_procedimiento - valor_aprobado`. Un perfil inválido liquida al 0 % y su dictamen depende del servicio. Si `PerfilCobertura` falta en la glosa se marca `AUDIT_FLAG_CLINICAL_UNCERTAINTY`, y si viene escrito pero no está en el catálogo se marca solo `AUDIT_FLAG_PERFIL_DESCONOCIDO`.
 * **Valor de Negocio:** Exactitud financiera determinista que garantiza que dos ejecuciones produzcan exactamente el mismo centavo y el mismo hash criptográfico.
 
 #### Escenarios BDD:
@@ -152,7 +161,7 @@ Feature: Liquidación Financiera Escalonada según Perfil COIL
 
 ---
 
-### RF-05: Trazabilidad Criptográfica Inmutable y Árbol de Hashes por Chunk y Lote
+### RF-05: Trazabilidad Criptográfica Inmutable y Concatenación Ordenada de Hashes con SHA-256 por Chunk y Lote
 * **Actor:** Generador de Recibo y Escritor Idempotente del Worker.
 * **Descripción:** Serializar cada decisión en **JSON canónico** (llaves ordenadas alfabéticamente, sin espacios en blanco, codificación UTF-8, montos formateados con dos decimales) incluyendo `id_solicitud`, `patient_token`, `catalogo_version`, `modelo_version`, `regla_ids`, `spans`, `perfil_cobertura`, `porcentaje`, `valor_procedimiento` y `valor_aprobado`, y calcular su `hash_decision` SHA-256. Al cierre del chunk, calcular la raíz hash del chunk (`raiz_hash_chunk`).
 * **Valor de Negocio:** Respaldo probatorio inmutable verificable por cualquier ente de control en tres niveles (orden, chunk y lote).

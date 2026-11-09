@@ -4,7 +4,8 @@
 | :--- | :--- |
 | Estado | Aprobado |
 | Fecha | 2026-10-21 (Actualizado 2026-10-27) |
-| Fase | Construction, diseño de infraestructura |
+| Fase | Paso 3, Arquitectura, diseño de infraestructura |
+| Equipo | Naomi Chow, Daniel Lopez y María Fernanda Toro |
 | Relacionado | ADR-001 (ruta híbrida), ADR-003 (prototipo en Learner Lab), [03_arquitectura_tecnica.md](../03_arquitectura_tecnica.md) |
 
 ---
@@ -13,7 +14,7 @@
 
 ADR-001 fijó que los workers consumen bloques (chunks de 5.000 solicitudes del dataset COIL) acumulados desde una cola SQS y escalan horizontalmente. Falta decidir **en qué servicio corren**. El worker ejecuta la extracción clínica en CPU, necesita entre 1 y 56 unidades de cómputo concurrentes según el rendimiento unitario $k$ (sección 8 del documento de arquitectura) y debe funcionar tanto en el AWS Academy Learner Lab (con las 1.200.000 solicitudes de `COIL_dataset_glosas_salud_1_2M.csv`, 240 chunks) como en la propuesta de producción (12.000.000 de solicitudes, 2.400 chunks).
 
-El Learner Lab impone restricciones que pesan en la decisión. Dispone de un presupuesto de **50 USD**, solo permite instancias EC2 de tamaño nano a large con un máximo de 32 vCPU y nueve instancias simultáneas por región, no permite crear roles IAM (todo usa `LabRole`) y la documentación pública del laboratorio no lista ECS, Fargate, Glue ni EMR. Un reporte de terceros indica además que ECS y Fargate no están disponibles en ningún Learner Lab. Lambda, SQS, S3, DynamoDB, Step Functions, Athena y CloudWatch sí aparecen como disponibles.
+El Learner Lab impone restricciones que pesan en la decisión. Dispone de un presupuesto de **50 USD**, solo permite instancias EC2 de tamaño nano a large con un máximo de 32 vCPU y nueve instancias simultáneas por región, no permite crear roles IAM (todo usa `LabRole`) y la documentación pública del laboratorio no lista ECS, Fargate, Glue ni EMR. Un reporte de terceros indica además que ECS y Fargate no están disponibles en ningún Learner Lab. Lambda, SQS, S3, DynamoDB, Step Functions, Athena y CloudWatch sí aparecen como disponibles. Glue Data Catalog se verifica en la tarea T2 del plan y, si no está disponible, T6 se omite.
 
 ## 2. Alternativas evaluadas
 
