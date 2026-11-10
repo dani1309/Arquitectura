@@ -172,7 +172,7 @@ Feature: Trazabilidad Criptográfica Inmutable sobre JSON Canónico
 
   Scenario: Generación de recibo firmado y verificación de integridad
     Given la solicitud "CHV-0000001" liquidada con dictamen "CUBRE", regla "COV-005" y valor_aprobado "42308.50"
-    And catalogo_version "COIL-2026.1" y modelo_version "coil-ner-v1.0"
+    And catalogo_version "COIL-2026.1" y modelo_version "coil-parser-v1.0"
     When el generador de recibo construye el JSON canónico de la decisión
     Then calcula el hash_decision SHA-256 de 64 caracteres hexadecimales
     And persiste el recibo en el almacenamiento de auditoría (WORM) y la fila en formato Parquet para la tabla Iceberg
