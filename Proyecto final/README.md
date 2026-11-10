@@ -36,7 +36,7 @@ Proyecto final/
     └── E04/
 ```
 
-El dataset `COIL_dataset_glosas_salud_1_2M.csv` (~360 MB) no se versiona: `.gitignore` lo excluye en cualquier ruta. Pendiente: el equipo confirmará de dónde se obtiene.
+El dataset `COIL_dataset_glosas_salud_1_2M.csv` (~360 MB) no se versiona: `.gitignore` lo excluye en cualquier ruta. Cada integrante lo tiene localmente en `data/raw/` (ignorado por git) y su SHA-256 está en la [bitácora](docs/bitacora/bitacora_decisiones.md).
 
 ## Estado de los 6 pasos AI-DLC
 

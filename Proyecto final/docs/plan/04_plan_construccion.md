@@ -52,7 +52,7 @@ Todas las tareas tienen responsable por asignar. Las tareas T0, T5a y T8 no esta
 
 | ID | Tarea | Depende de | MoSCoW | Criterio de terminado verificable | Responsable |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| T0 | Obtener el dataset `COIL_dataset_glosas_salud_1_2M.csv` y fijar su ubicación local fuera de git | Ninguna | Must | El archivo existe en la ruta acordada, tiene 1.200.000 filas más la cabecera de 6 columnas de RF-01 y su SHA-256 queda anotado en la bitácora | Por asignar |
+| T0 | Obtener el dataset `COIL_dataset_glosas_salud_1_2M.csv` y fijar su ubicación local fuera de git | Ninguna | Must | El archivo existe en la ruta acordada, tiene 1.200.000 filas más la cabecera de 6 columnas de RF-01 y su SHA-256 queda anotado en la bitácora. **Cumplida el 2026-11-09** | Por asignar |
 | T1 | Núcleo local en Python con validación, pseudonimización con `#`, extracción con spans, cobertura, liquidación con `Decimal` y hash SHA-256 | Ninguna | Must | Hay un test por cada escenario BDD de RF-01 a RF-05 y todos pasan en local. Para cada entidad clínica extraída se cumple que el texto en `[start_char, end_char]` coincide en la glosa original y en la enmascarada. La liquidación no usa `float`. Cambiar un centavo o un carácter del JSON canónico cambia el `hash_decision`. El escaneo de PII de RNF-05 sobre las salidas de los tests da cero coincidencias | Por asignar |
 | T2 | Infraestructura en el Learner Lab con buckets, SQS con DLQ y DynamoDB, más las pruebas tempranas de R-01. Se hace en paralelo con T1 | Ninguna | Must | Los recursos de la sección 1.1 existen en `us-east-1`. Queda escrito en `docs/verificacion/` el resultado de cada prueba de R-01 con su evidencia, es decir Object Lock, ECR, límite de concurrencia de Lambda, Glue Data Catalog, Secrets Manager y la forma de consultar el costo consumido. No queda ningún recurso con costo fijo por hora. El procedimiento de apagado está documentado | Por asignar |
 | T3 | Particionador y worker Lambda | T1, T2 | Must | Un CSV de prueba con varios chunks y una fila malformada recorre la cadena completa en AWS. Al final `chunks_completados` es igual a `chunks_totales`, la fila malformada está en `rechazos/`, la DLQ está vacía y reenviar un mensaje ya procesado no cambia los contadores de `META` (RNF-06) | Por asignar |
@@ -137,7 +137,7 @@ El enunciado describe el E03 como "Prototipo funcional en AWS, pruebas, evidenci
 | :--- | :--- | :--- |
 | R-01, permisos de `LabRole` sobre Object Lock, ECR y concurrencia de Lambda | Cambia el empaquetado del worker y el mecanismo WORM | T2 |
 | R-02, el `k` real define `N` y el costo | Cambia la extrapolación | T4 |
-| Dataset no disponible (pendiente, el equipo confirmará de dónde se obtiene) | Bloquea T4 y T5a | T0 |
+| Dataset no disponible. **Cerrado por T0** | Bloqueaba T4 y T5a | T0 |
 | Disponibilidad de Glue Data Catalog en el laboratorio | Bloquea T6 | T2 |
 
 ## 7. Preguntas para el equipo
