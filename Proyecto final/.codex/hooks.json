@@ -1,0 +1,122 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "aidlc engine adapter codex session-start",
+            "timeout": 1800
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "aidlc engine adapter codex record-human-turn",
+            "timeout": 1800
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "aidlc engine adapter codex guard-tool-call",
+            "timeout": 1800
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "aidlc engine adapter codex deliver-stage-rules",
+            "timeout": 1800
+          }
+        ],
+        "matcher": "spawn_agent"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "aidlc engine adapter codex record-human-turn",
+            "timeout": 1800
+          }
+        ],
+        "matcher": "request_user_input"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "aidlc engine adapter codex audit-and-sensors",
+            "timeout": 3600
+          }
+        ],
+        "matcher": "apply_patch"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "aidlc engine adapter codex sync-workflow-state",
+            "timeout": 1800
+          }
+        ],
+        "matcher": "update_plan"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "aidlc engine adapter codex rebuild-stage-graph",
+            "timeout": 1800
+          }
+        ],
+        "matcher": "Bash"
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "aidlc engine adapter codex validate-state",
+            "timeout": 1800
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "aidlc engine adapter codex log-subagent",
+            "timeout": 1800
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "aidlc engine adapter codex continue-workflow",
+            "timeout": 3600
+          }
+        ]
+      }
+    ]
+  }
+}
