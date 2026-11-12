@@ -127,7 +127,17 @@ def render_markdown_to_docx(
         m_img = re.match(r"^!\[(.*?)\]\((.*?)\)$", line.strip())
         if m_img:
             caption, rel_path = m_img.group(1), m_img.group(2)
+            # Buscar en DIAG_DIR o resolver relativo a docs/ o absoluto
             img_file = (DIAG_DIR / Path(rel_path).name).resolve()
+            if not img_file.exists():
+                candidate = (PROJECT_ROOT / "docs" / "verificacion" / "screenshots" / Path(rel_path).name).resolve()
+                if candidate.exists():
+                    img_file = candidate
+            if not img_file.exists():
+                candidate2 = (Path(rel_path)).resolve()
+                if candidate2.exists():
+                    img_file = candidate2
+
             if img_file.exists():
                 p_img = doc.add_paragraph()
                 p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -309,6 +319,18 @@ Se cargó el archivo oficial `COIL_dataset_glosas_salud_1_2M.csv` (`360.354.593 
 | **Costo total real de la corrida de 1,2M en AWS** | **`0,0189 USD`** (**`0,0158 USD por millón`**) | Cumple `RNF-03` ($\le 0,50\text{ USD/M}$; `< 0,04 %` del crédito de 50 USD) |
 | **Escaneo de PII en S3, DynamoDB y CloudWatch (`RNF-05`)** | **`0` coincidencias** | Cumple `RNF-05` y `ADR-002` |
 
+### 4.1. Evidencia Visual en AWS Console: DynamoDB (`control_lotes`)
+
+La siguiente captura de pantalla de la consola oficial de Amazon DynamoDB en la cuenta `329771219583` demuestra la consulta directa sobre `PK = LOTE#LOTE-COIL-1200K` y `SK = META`, evidenciando el estado `PROCESADO`, los `240` chunks completados y la versión del catálogo:
+
+![Evidencia en Amazon DynamoDB: Item Resumen META de LOTE-COIL-1200K](../../docs/verificacion/screenshots/aws_dynamodb_lote_coil_1200k_meta.png)
+
+### 4.2. Evidencia Visual en AWS Console: CloudWatch Metrics de AWS Lambda (`saom-worker`)
+
+La siguiente captura de las métricas de Amazon CloudWatch para la función `saom-worker` en la cuenta `329771219583` muestra el pico de invocaciones concurrentes (10 ejecuciones simultáneas), la tasa de éxito del **100 % (0 errores)** y la duración promedio en torno a `1.061 ms`:
+
+![Métricas en CloudWatch de la función Lambda saom-worker](../../docs/verificacion/screenshots/aws_lambda_saom_worker_metrics.png)
+
 ---
 
 ## 5. Calidad de Extracción `F1-Score` (`T5a`/`T5`) y Extrapolación $M/M/c$ hacia 12 Millones
@@ -342,6 +364,12 @@ En Amazon Athena (`saom_analytics.adjudicaciones`) se ejecutó la sentencia `MER
 - **Primer `MERGE INTO`**: **`1.200.000` filas** consolidadas.
 - **Segundo `MERGE INTO` sobre `chunk_id = 0` (prueba de idempotencia)**: **`1.200.000` filas** (`0` duplicados).
 - **Verificación criptográfica de 3 niveles desde filas de Iceberg (`CHV-0000001` a `CHV-0000005`)**: coincidencia del **100 %** en Nivel 1 (`hash_decision`), Nivel 2 (`raiz_hash_chunk = 6e8de620c632b6382346f841988f2739595340e778a7b098daeacee40f26a757`) y Nivel 3 (`raiz_hash_lote = 78dbff2ea6b365f3399315b1377111bc3ec23939ce539a101378b3f8b648869e`).
+
+### 6.1. Evidencia Visual en AWS Console: Amazon Athena (Consulta SQL a Apache Iceberg)
+
+La siguiente captura en el editor de consultas de Amazon Athena muestra la ejecución exitosa de `SELECT COUNT(*) AS total_ordenes_iceberg FROM adjudicaciones;` sobre la base de datos `saom_analytics`, certificando la consolidación de exactamente **`1.200.000` registros**:
+
+![Evidencia en Amazon Athena: Consulta SELECT COUNT a la tabla Iceberg adjudicaciones](../../docs/verificacion/screenshots/aws_athena_iceberg_1200k.png)
 """
 
 
