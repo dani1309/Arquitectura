@@ -67,6 +67,12 @@ La revisión sistemática de la literatura (52 fuentes indexadas `[1]` a `[52]` 
   - Valor total aprobado por el fondo público: **`57.328.903.464,00`**
 - **Raíz criptográfica del lote (`raiz_hash_lote`)**: `78dbff2ea6b365f3399315b1377111bc3ec23939ce539a101378b3f8b648869e`.
 
+#### Evidencia en AWS Console: Control de Lotes y Chunks en DynamoDB (`META`)
+![Evidencia en Amazon DynamoDB: Item Resumen META de LOTE-COIL-1200K](../../docs/verificacion/screenshots/aws_dynamodb_lote_coil_1200k_meta.png)
+
+#### Evidencia en AWS Console: Métricas de Cómputo CloudWatch en AWS Lambda (`saom-worker`)
+![Métricas en CloudWatch de la función Lambda saom-worker](../../docs/verificacion/screenshots/aws_lambda_saom_worker_metrics.png)
+
 ### 4.2. Consolidación en Apache Iceberg y Consultas Analíticas en Amazon Athena (`T6`)
 
 La tabla Iceberg `saom_analytics.adjudicaciones` consolidó las **`1.200.000` órdenes** y demostró idempotencia exacta tras repetir `MERGE INTO` (`1.200.000` filas). El desglose por fecha y por canal emisor obtenido en Athena es el siguiente:
@@ -77,6 +83,9 @@ La tabla Iceberg `saom_analytics.adjudicaciones` consolidó las **`1.200.000` ó
 | `2026-05-05` | 396.000 | 522.711.751.027,00 | 18.950.939.658,50 |
 | `2026-05-06` | 402.000 | 531.932.943.100,00 | 19.222.024.188,75 |
 | **Total Oficial** | **1.200.000** | **1.583.859.890.309,00** | **57.328.903.464,00** |
+
+#### Evidencia en AWS Console: Consulta SQL SELECT COUNT en Amazon Athena
+![Evidencia en Amazon Athena: Consulta SELECT COUNT a la tabla Iceberg adjudicaciones](../../docs/verificacion/screenshots/aws_athena_iceberg_1200k.png)
 
 ---
 
