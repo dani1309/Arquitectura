@@ -1,0 +1,1232 @@
+{
+  "fecha_utc": "2026-11-11 23:58:04",
+  "infraestructura": {
+    "account_id": "329771219583",
+    "region": "us-east-1",
+    "buckets": {
+      "raw": "saom-raw-329771219583",
+      "ref": "saom-ref-329771219583",
+      "curated": "saom-curated-329771219583",
+      "audit": "saom-audit-329771219583"
+    },
+    "queues": {
+      "lotes_recibidos": "https://sqs.us-east-1.amazonaws.com/329771219583/lotes-recibidos",
+      "chunks_adjudicacion": "https://sqs.us-east-1.amazonaws.com/329771219583/chunks-adjudicacion",
+      "dlq": "https://sqs.us-east-1.amazonaws.com/329771219583/chunks-adjudicacion-dlq"
+    },
+    "dynamodb_table": "control_lotes",
+    "lambdas": [
+      "saom-particionador",
+      "saom-worker"
+    ]
+  },
+  "t3_integracion": {
+    "lote_id": "LOTE-T3-INTEGRACION",
+    "tiempo_total_s": 4.83,
+    "estado": "PROCESADO",
+    "chunks_totales": 3,
+    "chunks_completados": 3,
+    "ordenes_validas": 10000,
+    "ordenes_rechazadas": 1,
+    "suma_reclamada": "13185113309",
+    "suma_aprobada": "475070357.5",
+    "raiz_hash_lote": "6a80888fc96d1909d081beeed5e299dbc341205207bc07daeadc3f12fafddf4a",
+    "rechazo_aislado": {
+      "lote_id": "LOTE-T3-INTEGRACION",
+      "chunk_id": 0,
+      "linea_num": 1,
+      "id_solicitud": "CHV-9999999",
+      "estado": "REJECTED_SYNTAX",
+      "motivo": "valor_procedimiento inválido"
+    },
+    "pii_en_rechazo": 0,
+    "mensajes_dlq": 0,
+    "idempotencia_rnf06_ok": true,
+    "respuesta_worker_duplicado": {
+      "chunks_procesados": 0,
+      "duplicados_ignorados": 1,
+      "lotes_cerrados": []
+    }
+  },
+  "t4_corrida_1_2m": {
+    "lote_id": "LOTE-COIL-1200K",
+    "estado": "PROCESADO",
+    "chunks_totales": 240,
+    "chunks_completados": 240,
+    "ordenes_validas": 1200000,
+    "ordenes_rechazadas": 0,
+    "ordenes_incertidumbre": 0,
+    "total_ordenes_contabilizadas": 1200000,
+    "suma_reclamada": "1583859890309",
+    "suma_aprobada": "57328903464",
+    "raiz_hash_lote": "78dbff2ea6b365f3399315b1377111bc3ec23939ce539a101378b3f8b648869e",
+    "manifiesto_worm": {
+      "lote_id": "LOTE-COIL-1200K",
+      "fecha_radicacion": "2026-11-11",
+      "estado": "PROCESADO",
+      "catalogo_version": "COIL-2026.1",
+      "modelo_version": "coil-parser-v1.0",
+      "key_version": "hmac-2026-v1",
+      "chunks_totales": 240,
+      "chunks_completados": 240,
+      "ordenes_totales": 1200000,
+      "ordenes_validas": 1200000,
+      "ordenes_rechazadas": 0,
+      "ordenes_incertidumbre": 0,
+      "suma_reclamada": "1583859890309.00",
+      "suma_aprobada": "57328903464.00",
+      "raiz_hash_lote": "78dbff2ea6b365f3399315b1377111bc3ec23939ce539a101378b3f8b648869e",
+      "raices_chunks": [
+        {
+          "chunk_id": 0,
+          "raiz_hash_chunk": "6e8de620c632b6382346f841988f2739595340e778a7b098daeacee40f26a757"
+        },
+        {
+          "chunk_id": 1,
+          "raiz_hash_chunk": "51c7ed30e46841e34f28756348d1eaeac7c2529ec88051d03ab034aecd2a1c5c"
+        },
+        {
+          "chunk_id": 2,
+          "raiz_hash_chunk": "f40bc64aa80eb5d1121f23a505562e97353836d08f67fa3d905d2ce0d2948bf1"
+        },
+        {
+          "chunk_id": 3,
+          "raiz_hash_chunk": "72afd0916a7d54ecbacd9a2b162bf575546e975fd0bd9108a2c82e4b67ef3d5b"
+        },
+        {
+          "chunk_id": 4,
+          "raiz_hash_chunk": "a718544b99a834e34b5708084e5091db2f7d4cd3686b22123be97262c090d53c"
+        },
+        {
+          "chunk_id": 5,
+          "raiz_hash_chunk": "e7f552ad453895beaaafbff02b617efd3f9d68d21ecb7213e5eed19c88665b0b"
+        },
+        {
+          "chunk_id": 6,
+          "raiz_hash_chunk": "6525bbef82b7cdfc2f7cc439656c2a76edf5234cec1c540b664e71c99c4e9381"
+        },
+        {
+          "chunk_id": 7,
+          "raiz_hash_chunk": "e3991135c1f1337bc5ae5e1a6364096fda59e7c4d00b407abfadf006772e909f"
+        },
+        {
+          "chunk_id": 8,
+          "raiz_hash_chunk": "64a6a614a2464993c778bc911395b78f3b709537a653aab61e3d5a4cea635195"
+        },
+        {
+          "chunk_id": 9,
+          "raiz_hash_chunk": "9dae066f3bad8b88525dc7dc9e847957beb8e3520a6205c73e3a8b1816e20c4d"
+        },
+        {
+          "chunk_id": 10,
+          "raiz_hash_chunk": "722127fb6348e20b1fa5e4708d651772e44cdc462afd7069d518a751af70faff"
+        },
+        {
+          "chunk_id": 11,
+          "raiz_hash_chunk": "0278969987de403d86558000a4c408b9db21817209604e4c6874c6a427dce3cd"
+        },
+        {
+          "chunk_id": 12,
+          "raiz_hash_chunk": "440c01ce774c92a2941cfcc67e827989e34b9860c6281980f93112da9096c9ca"
+        },
+        {
+          "chunk_id": 13,
+          "raiz_hash_chunk": "f34b5d9f6bef11b785a2b31ef8012150cf58944ef03962e4281a355b4d009313"
+        },
+        {
+          "chunk_id": 14,
+          "raiz_hash_chunk": "be8c20cd21b738e6bec64e5d8a422ed23988f82db3f7e2967d89dffff5038ef6"
+        },
+        {
+          "chunk_id": 15,
+          "raiz_hash_chunk": "2d80be4e834f932e9ece16ac498f557947f7fde29e86484ad5b51d9465445e4c"
+        },
+        {
+          "chunk_id": 16,
+          "raiz_hash_chunk": "691943b8820f08427a0454535165c3249c280bb8680501637ea7302238c701c9"
+        },
+        {
+          "chunk_id": 17,
+          "raiz_hash_chunk": "5a5411c2129dd1feef54f34820102ae6e9fdc067b1793f66fad918a22c948c5a"
+        },
+        {
+          "chunk_id": 18,
+          "raiz_hash_chunk": "176ca6f79bc13361cd7a1a4db17d0b8f380a3ee2904ff32da0847a19c2f6a10b"
+        },
+        {
+          "chunk_id": 19,
+          "raiz_hash_chunk": "e1051d5c2b9ae8ccc2b66dd2391d4b8b20103eb77578a219b3dc4b87d69c3a24"
+        },
+        {
+          "chunk_id": 20,
+          "raiz_hash_chunk": "34f6f69599cca66fb59e53de11ea6fa18f95fa983968c453091c4ced47b1f41e"
+        },
+        {
+          "chunk_id": 21,
+          "raiz_hash_chunk": "b6b0628e9f40b37eeba8401f846a09ebdf6131f8536afd6c8032613c23e86958"
+        },
+        {
+          "chunk_id": 22,
+          "raiz_hash_chunk": "75e3699e226a37b31895499b4e9f0ed7f1bec1078de5f45905ebdac23c31ccd0"
+        },
+        {
+          "chunk_id": 23,
+          "raiz_hash_chunk": "62b4c82187f6466cb51f0fe562f07cc2e30f399b1ba40773805137585648d486"
+        },
+        {
+          "chunk_id": 24,
+          "raiz_hash_chunk": "454142b0a4914f95d62f61c35f7ebbbfee6064964dbd86eee0cda73782cec2b5"
+        },
+        {
+          "chunk_id": 25,
+          "raiz_hash_chunk": "79ee2a0bc3dbb9d3058a0367157404a06111d9ffb00e0dfda9cd463834ffd249"
+        },
+        {
+          "chunk_id": 26,
+          "raiz_hash_chunk": "3753b314c16a94101631acd41d4d4a39a80ef7e4453197ffc48645c55eb9bdc5"
+        },
+        {
+          "chunk_id": 27,
+          "raiz_hash_chunk": "0eb26902f022cfba756b11bc92399f484d66da379123922d4ff0cacb6b19786f"
+        },
+        {
+          "chunk_id": 28,
+          "raiz_hash_chunk": "01e3fc6ee1d24d47982d238f44cd4f8aa8bcb30194c63f9f7e12ce031b91d0fc"
+        },
+        {
+          "chunk_id": 29,
+          "raiz_hash_chunk": "0840092c2bee257ce7c9b7dde35bed31fb8632d391339655482db6c7753a5396"
+        },
+        {
+          "chunk_id": 30,
+          "raiz_hash_chunk": "64705aafa69676ca1d1216707ddfb67958642ae15962fbbc4d428ed1108e0052"
+        },
+        {
+          "chunk_id": 31,
+          "raiz_hash_chunk": "b733d2e1d32691b029d3cdb9e3d5f63a8c4954b9778c866e165d114a4715709b"
+        },
+        {
+          "chunk_id": 32,
+          "raiz_hash_chunk": "becdd3c470b573dd51f64b87b56ff63da2154f5ad89179e2f567b1e3b194b8f5"
+        },
+        {
+          "chunk_id": 33,
+          "raiz_hash_chunk": "f9d71eb0846cde75afbd19f110e9f1cb0d7163360db9f848e80e060b67aa5d4a"
+        },
+        {
+          "chunk_id": 34,
+          "raiz_hash_chunk": "8dedf89064b6e38c5378f8e27c0431543280fa41dd09426d7201e6f66d723cb8"
+        },
+        {
+          "chunk_id": 35,
+          "raiz_hash_chunk": "6bc47faeb3e5718f930b6a45ea012cb95ecc6c2b88769647fa3a0bb3c5f5819e"
+        },
+        {
+          "chunk_id": 36,
+          "raiz_hash_chunk": "c0ab559202485b51ee2e768a0e46349b1ab43cd77e74df5a656e9abf0d6c05dd"
+        },
+        {
+          "chunk_id": 37,
+          "raiz_hash_chunk": "3585fca8372283127c5788c7c247fe5a1c083b124ce679cd77c3f8f5449f4678"
+        },
+        {
+          "chunk_id": 38,
+          "raiz_hash_chunk": "3d73ce736d7cdcc1961ca38ed4b6d7bc719efb2e7c70d34759b61c2648c768a8"
+        },
+        {
+          "chunk_id": 39,
+          "raiz_hash_chunk": "038b0a1923ac833153e23a397f62cf66eee0bb497b15dc5870d7a7900020943f"
+        },
+        {
+          "chunk_id": 40,
+          "raiz_hash_chunk": "5e6c31d2ef5e419c63b7848c0609d37b1647a5c1cfaf97bbba752dd8bb4ac68b"
+        },
+        {
+          "chunk_id": 41,
+          "raiz_hash_chunk": "9a6e98cb864fc31ec8a76cef7a5e6167f79f54fb69d83730f057be728b403f33"
+        },
+        {
+          "chunk_id": 42,
+          "raiz_hash_chunk": "f5b917ecec542f97214f0f6472f6fedef48a045d480c75dfa9fe101bb6911b0e"
+        },
+        {
+          "chunk_id": 43,
+          "raiz_hash_chunk": "a7ce2b5258985ca2ac9e56e25b3e7e822d23f336d3494dceb132723f3e00f51a"
+        },
+        {
+          "chunk_id": 44,
+          "raiz_hash_chunk": "affc7773b76f19780df79c94c64f0f3731e6822735a9b41edafbd67261ec30e0"
+        },
+        {
+          "chunk_id": 45,
+          "raiz_hash_chunk": "f12447016d82544e7e0a1ac2b4287cb1b7897ef0a2ef47d7809355682c43e0c8"
+        },
+        {
+          "chunk_id": 46,
+          "raiz_hash_chunk": "a30a7ead2876afacb7b44033bd28fb296af04c67cf34253833a70a6f782be94d"
+        },
+        {
+          "chunk_id": 47,
+          "raiz_hash_chunk": "c2209c10c2a4813793c136464ceb3d73f51caa0a33c7b5d6df0ba02e405878ac"
+        },
+        {
+          "chunk_id": 48,
+          "raiz_hash_chunk": "eb246221cb16a9a1200dc37935be10756e37237560fdbed2040f272ccdb36ddc"
+        },
+        {
+          "chunk_id": 49,
+          "raiz_hash_chunk": "5797ddda334800fa0e040ac6068411879209d31bf8d57e7a89edbdb8a77fd109"
+        },
+        {
+          "chunk_id": 50,
+          "raiz_hash_chunk": "9aa671ee8d5a3299966c6950dc29b61ba0c3a903fc102f47c4aa757ed6fa85b0"
+        },
+        {
+          "chunk_id": 51,
+          "raiz_hash_chunk": "ff25ca33fe0c63565747d5202ad997b5143963a8bc274b43ff73fa5b74c0292c"
+        },
+        {
+          "chunk_id": 52,
+          "raiz_hash_chunk": "4a7e57a845bd089c57056d2c81764356cd006c8d241dcb53bfcd0b61912b77d4"
+        },
+        {
+          "chunk_id": 53,
+          "raiz_hash_chunk": "c322306a613977cc55b8a1f948f7c61157a78c94ca626f77c918dbc0fe033de9"
+        },
+        {
+          "chunk_id": 54,
+          "raiz_hash_chunk": "fbc69c55b0153bc55cc2854b5647b8e8d555ac684deaf61d105f5eb7db26fe1b"
+        },
+        {
+          "chunk_id": 55,
+          "raiz_hash_chunk": "876750f6ae1711d7ce65da9a2dee02291cd61726bedc903dafe3ee09fd91d292"
+        },
+        {
+          "chunk_id": 56,
+          "raiz_hash_chunk": "bb131eb7c29910be3c1839da876a5d72e5fb5fe81f2469980858232063b1190a"
+        },
+        {
+          "chunk_id": 57,
+          "raiz_hash_chunk": "b6b9e7126cf12122fac5c248c39b71703b1f8ed0083754e1747a0f4a630a6a42"
+        },
+        {
+          "chunk_id": 58,
+          "raiz_hash_chunk": "ede65f160ebb9a6b01901c2e6955083fd9146df487d3b2b35456206adbefb2f3"
+        },
+        {
+          "chunk_id": 59,
+          "raiz_hash_chunk": "c1577439227712ab0b62f0cf90813f7f14302d9cfa5fecc4f347cbab5bc46545"
+        },
+        {
+          "chunk_id": 60,
+          "raiz_hash_chunk": "6721537b225a2e4d91cb0805edd8a4d3a1cfd7844609a05665f4333b8ae418d5"
+        },
+        {
+          "chunk_id": 61,
+          "raiz_hash_chunk": "6c924834c50a74789982793eec018d400c5672b6fdd2b95bc39c49d6d46a4d01"
+        },
+        {
+          "chunk_id": 62,
+          "raiz_hash_chunk": "7dcae202b67d90ce5627fdcc958ed5881551c958a57a24a629063c6ea2bbcdb1"
+        },
+        {
+          "chunk_id": 63,
+          "raiz_hash_chunk": "03e970dcf596272c3ded1571ea80bef8d1f4f110eb76329ca901657bc6fedfe6"
+        },
+        {
+          "chunk_id": 64,
+          "raiz_hash_chunk": "fd9d4661388debf58fbf117628bf464f50af6017891e1537897eececc78a6107"
+        },
+        {
+          "chunk_id": 65,
+          "raiz_hash_chunk": "b4412a43ac9dd2633c6c0c2c3bce617fb07916566c47a257fe85411751c3350e"
+        },
+        {
+          "chunk_id": 66,
+          "raiz_hash_chunk": "f2066c91bad653f07019ce476aa0dbb92274b96eb7cf1fc9daf6404127acec0b"
+        },
+        {
+          "chunk_id": 67,
+          "raiz_hash_chunk": "f9a91d77337c418249887cc5ba354b14f0b4f910b972a15abc0b510a38d7bae3"
+        },
+        {
+          "chunk_id": 68,
+          "raiz_hash_chunk": "4e648073e62194ab406fb26ab838df4b593722ecb7517074307293424fc1228f"
+        },
+        {
+          "chunk_id": 69,
+          "raiz_hash_chunk": "b38ec9fba8b730ab3fd6c3ecdc087b215521175f1a605cae8f3c69fd57291aa6"
+        },
+        {
+          "chunk_id": 70,
+          "raiz_hash_chunk": "f004eb15915c65e616cc24e1ab81fef052e1be29f1a1f6701735310c08292c11"
+        },
+        {
+          "chunk_id": 71,
+          "raiz_hash_chunk": "6c06e5135bf23f16498ee11ca031c573755a78b4eafe15436f1742f8abc127b6"
+        },
+        {
+          "chunk_id": 72,
+          "raiz_hash_chunk": "1c0b4cd6a1d446114426a53b05363c5119dca331a1b62da013802a6e406b1d03"
+        },
+        {
+          "chunk_id": 73,
+          "raiz_hash_chunk": "dd84be2a90d5abc389df045685f83ced90f37525963bf5d1e54db3a3a4889eda"
+        },
+        {
+          "chunk_id": 74,
+          "raiz_hash_chunk": "aecb988c274aa5563e88b974a85b483686dfbb26ff302ab3fe9302664bbe74f7"
+        },
+        {
+          "chunk_id": 75,
+          "raiz_hash_chunk": "80c392b14a97b8121484657ef02741a7b48d9a3bbae972d7955c39455e0711e6"
+        },
+        {
+          "chunk_id": 76,
+          "raiz_hash_chunk": "b97830e10c8a04d2ea55ad9f2c377a20519205320ab90897e9d9858bc5e25e2c"
+        },
+        {
+          "chunk_id": 77,
+          "raiz_hash_chunk": "d2bb1357674ca06bebf9d1fdbd17c5800ee26b8e98cb564fb9a0cdf2a1011007"
+        },
+        {
+          "chunk_id": 78,
+          "raiz_hash_chunk": "61d3b9dd783fcfa32a15af2cedca036fc3b0cb83d3dc2f0fdb03a20668eca8f3"
+        },
+        {
+          "chunk_id": 79,
+          "raiz_hash_chunk": "ad71c66a0db3871bdac57b6191d5f9c37ce370c327d74bb7629325d80d8a00f2"
+        },
+        {
+          "chunk_id": 80,
+          "raiz_hash_chunk": "382c4eabea22eca0c848535347eb342b6e341440530644415a32c41efebe4bc7"
+        },
+        {
+          "chunk_id": 81,
+          "raiz_hash_chunk": "6cb092eb9615761c09f047b732c927281a6c4bbb8abd5c075dea46e1d3de29d8"
+        },
+        {
+          "chunk_id": 82,
+          "raiz_hash_chunk": "107e9e4fc606222826be62193cb5e1e10514a35350faeab7fe5a43d1e64fea80"
+        },
+        {
+          "chunk_id": 83,
+          "raiz_hash_chunk": "578a2b27b65f76d326b088ada215caa55032cd4790bd0e3e8c56190bd086dff9"
+        },
+        {
+          "chunk_id": 84,
+          "raiz_hash_chunk": "050ec6a6613cde99129be354f0699b54f60836eaee68fb5d979b7c30e67d8d57"
+        },
+        {
+          "chunk_id": 85,
+          "raiz_hash_chunk": "a07891b0a743f4d09d8891590a6498e5021e98eb30f35e3825042345cd5fb477"
+        },
+        {
+          "chunk_id": 86,
+          "raiz_hash_chunk": "7662869b4a272fa2a9fa7c12fceda93583cb1678647171cf51bffd60874dfff6"
+        },
+        {
+          "chunk_id": 87,
+          "raiz_hash_chunk": "f75fcb1791e4ac7af4fd9c1cb4653c5c6b9968255b573b631faf06ec1de962e3"
+        },
+        {
+          "chunk_id": 88,
+          "raiz_hash_chunk": "bbf622ca56a96899c16464c5f10304215fd38ab0d00e34fec6edaab72280d9b9"
+        },
+        {
+          "chunk_id": 89,
+          "raiz_hash_chunk": "a58a4e6822ace59f9128a52eb59636b2211af5bdbb7d6099a760a413b2d4494b"
+        },
+        {
+          "chunk_id": 90,
+          "raiz_hash_chunk": "fff5a208c52d3bafc3bd32f2d6669978ab8a3c2d9d4ffcec0e90458745ee657a"
+        },
+        {
+          "chunk_id": 91,
+          "raiz_hash_chunk": "a1e7483a188c1184420509cdd11796ef0b4d4bab304686a2b3372b0eab45271f"
+        },
+        {
+          "chunk_id": 92,
+          "raiz_hash_chunk": "fd518d0cfce263d65925ff8079bedf96ec312b0466e3961d95fca933ddb42dc1"
+        },
+        {
+          "chunk_id": 93,
+          "raiz_hash_chunk": "9a98bd22202dac8b832d85ebddd5403794c16f153b04b8a823d0cee7dd64462f"
+        },
+        {
+          "chunk_id": 94,
+          "raiz_hash_chunk": "78e6cfc0d4d968bab593cb769b62ea750eed13407176bf59e1a243f0ca6e687c"
+        },
+        {
+          "chunk_id": 95,
+          "raiz_hash_chunk": "746dbead40503090d53dc12787fd0d740c837be3aca67ce33783ee4c76bbb33c"
+        },
+        {
+          "chunk_id": 96,
+          "raiz_hash_chunk": "b6888451a6e8750ef8a13559c8c2e9103c7aeee43e40e43aed9c844ac4b93399"
+        },
+        {
+          "chunk_id": 97,
+          "raiz_hash_chunk": "c09e97e9b061ab6f57e4cd70702c0a59efe32384538591b3a158a436d19b3bab"
+        },
+        {
+          "chunk_id": 98,
+          "raiz_hash_chunk": "de361348c7c12848f59c26d0bc834355a9d8943bcea4e4f38de9c9823c1502ff"
+        },
+        {
+          "chunk_id": 99,
+          "raiz_hash_chunk": "ead6c422a35690f47523d282f89b5bada89a9d5ac53d73c47bb88049f7a262da"
+        },
+        {
+          "chunk_id": 100,
+          "raiz_hash_chunk": "cf5ed29cc79d048cad9275e5f22bef6ac7cbf0e189176eade9b0e5d43f6a3c9a"
+        },
+        {
+          "chunk_id": 101,
+          "raiz_hash_chunk": "06f69ceb76413a2800c1db987564a24b522477d19ec8c2c3362d89708edc5d6e"
+        },
+        {
+          "chunk_id": 102,
+          "raiz_hash_chunk": "679fe1e3ee59da8b1557c95cf4c4779298fc03e6de17023aa013a026d8e9f9b8"
+        },
+        {
+          "chunk_id": 103,
+          "raiz_hash_chunk": "f98c4f7ec91db4e893ff93811903ce03d4a702008d9dff854de6ad74a8e13b8a"
+        },
+        {
+          "chunk_id": 104,
+          "raiz_hash_chunk": "3997db32bf449681335e08c141dd897bbf00730e29270d4447b5816665422486"
+        },
+        {
+          "chunk_id": 105,
+          "raiz_hash_chunk": "b0ded730774161c45b2b8246c61b8298dc42588522a749181b17ca52e5959e0b"
+        },
+        {
+          "chunk_id": 106,
+          "raiz_hash_chunk": "2ec4db06527bfeae842122d163689ca50bc339b6d890807afa7963634096576b"
+        },
+        {
+          "chunk_id": 107,
+          "raiz_hash_chunk": "951188b2ab1badc57b1ba2032335eebd749b700c2a3599507fb70fc4047d80eb"
+        },
+        {
+          "chunk_id": 108,
+          "raiz_hash_chunk": "3801173507fb39e750eb3be79fae8d718141e0a9b0ab4fc8d4df662814b95028"
+        },
+        {
+          "chunk_id": 109,
+          "raiz_hash_chunk": "5801d705ccffdaf5aa5e9f1c955296366874b5cb1276d1c3be5b63e4985fb9b3"
+        },
+        {
+          "chunk_id": 110,
+          "raiz_hash_chunk": "5d3ffd3f7e7d04d5ae63c53700aae491b057447f4e60dbf0f9e275a51999c637"
+        },
+        {
+          "chunk_id": 111,
+          "raiz_hash_chunk": "5dc1dcdfb6efde7fca2e4728c218e321edc5815d1b1c458f12a26ea7e4d4d8f3"
+        },
+        {
+          "chunk_id": 112,
+          "raiz_hash_chunk": "e802ead75b568366f7de7026eb7e8cca8147bf703e921480d7e5b71c54fba18c"
+        },
+        {
+          "chunk_id": 113,
+          "raiz_hash_chunk": "d41a11ba591c1de8146630bf69d69116459edac9faba7d9638ed242da709f920"
+        },
+        {
+          "chunk_id": 114,
+          "raiz_hash_chunk": "6b6a4190bc1e698a5f67d46deafd1e1f7954ed5fed0922c90437dda682d4d6dd"
+        },
+        {
+          "chunk_id": 115,
+          "raiz_hash_chunk": "c639d017777624ff8ee83e4612cead32c23668caf1674b207120626004206e58"
+        },
+        {
+          "chunk_id": 116,
+          "raiz_hash_chunk": "c49373fd0e351e3fed4fe51b09242cdf8a7b8ea33f6033384cac003e89fe3db0"
+        },
+        {
+          "chunk_id": 117,
+          "raiz_hash_chunk": "f82f5d29cf92f251fd8d6cad7ef3d1892281b815db142f92d76ab8dd3c5bd166"
+        },
+        {
+          "chunk_id": 118,
+          "raiz_hash_chunk": "8cc86b8daa338de41ea5301b216023c264e2d4af823c55a6b65a9c700ebb2c09"
+        },
+        {
+          "chunk_id": 119,
+          "raiz_hash_chunk": "bab8df7d9442edab7afb64319ceb2423b8dfeb76e9b8ab93c630436cd0c83c8c"
+        },
+        {
+          "chunk_id": 120,
+          "raiz_hash_chunk": "4e1a58a99025cfcb911b4013cda241351341b224471368c0a4aacaa6a0f00cbd"
+        },
+        {
+          "chunk_id": 121,
+          "raiz_hash_chunk": "6cb906e782433814da0b3f0aff9ec05959f21b7a9daa650dbc4dfbf53c9d4e1b"
+        },
+        {
+          "chunk_id": 122,
+          "raiz_hash_chunk": "433e711cf8f144b221d41eadedd856c1d856e605ad3c94356b8f535367297eb0"
+        },
+        {
+          "chunk_id": 123,
+          "raiz_hash_chunk": "65b4e394bddc877ac64995211a9e1503d3bb250b79509aa8b74a5698c86cd634"
+        },
+        {
+          "chunk_id": 124,
+          "raiz_hash_chunk": "beb094e30265de66524edaa14a99c139d4cf53f9e60d9e507250cc8ee12c543d"
+        },
+        {
+          "chunk_id": 125,
+          "raiz_hash_chunk": "1dd9a96afdc9723060ca8a649da056982e86927c25544b2f691dbd19ccf4bd75"
+        },
+        {
+          "chunk_id": 126,
+          "raiz_hash_chunk": "03209b3e52d964d74b7f58a6bdbf538a00ed54a43437a98ebda2b04fc572ea6f"
+        },
+        {
+          "chunk_id": 127,
+          "raiz_hash_chunk": "94dce20f6fe959488178c9e4aae4542ddb3e7fc7f8ad5616c657a62cdbf89682"
+        },
+        {
+          "chunk_id": 128,
+          "raiz_hash_chunk": "2640ea5ea4579357b4e6f94bc221e55f08f74fe948c4c82839c2bb32c0ddd3cf"
+        },
+        {
+          "chunk_id": 129,
+          "raiz_hash_chunk": "24d03c15b1743fe1eadbe968e3f5ceffadedb7f18ff4f31fe4872204c256ce52"
+        },
+        {
+          "chunk_id": 130,
+          "raiz_hash_chunk": "49163c0a01dde61994cf1581df1d938b23d3897fc85cab13ea531a2912ff3fa1"
+        },
+        {
+          "chunk_id": 131,
+          "raiz_hash_chunk": "438a1415db8b706c252aec52f6c8805cde98362b481d28a07f5d8a44ab26056e"
+        },
+        {
+          "chunk_id": 132,
+          "raiz_hash_chunk": "8caee425d9285fbc32e3598ff2a28874974aab9ca2918dc5bc90022142fe2aa1"
+        },
+        {
+          "chunk_id": 133,
+          "raiz_hash_chunk": "c2d87f5d54b5ab3ef94bb2561c1e6fdbcb64be874b8337905a15d309ebecb76f"
+        },
+        {
+          "chunk_id": 134,
+          "raiz_hash_chunk": "b5c7626094d13deacefe96b539e65609363aff4d5233e5cbc3dc3937b52db4ff"
+        },
+        {
+          "chunk_id": 135,
+          "raiz_hash_chunk": "b78cb6cd1948b827385020a2bccf60c0cd51c1efa8ffa50f540f56e2d05daae7"
+        },
+        {
+          "chunk_id": 136,
+          "raiz_hash_chunk": "2ee34f5570a8998e37ac6121b0b751ac2849e5c1c6d476ffda2ba7a5f7ea5821"
+        },
+        {
+          "chunk_id": 137,
+          "raiz_hash_chunk": "8223712a6f69ca93bc4403c2d017c9d99e7f81eecfe3b946fc60ed070e40627e"
+        },
+        {
+          "chunk_id": 138,
+          "raiz_hash_chunk": "a2ddf6961de69f5521382eb174ee4fba418603b446222a7f9b41db6e50c88e2f"
+        },
+        {
+          "chunk_id": 139,
+          "raiz_hash_chunk": "a21dac120bcb40eb5df81983854d351c7289573c14134f1e860d462ee6a42380"
+        },
+        {
+          "chunk_id": 140,
+          "raiz_hash_chunk": "f64a60f684d268df110a97bf1c93556eed90b4dbf0e91deff5a80e0a668a941a"
+        },
+        {
+          "chunk_id": 141,
+          "raiz_hash_chunk": "db484b45c7d97b4007996dfe4bbfcc2dc146c603bdfd21c9dd5049cc57f3807d"
+        },
+        {
+          "chunk_id": 142,
+          "raiz_hash_chunk": "2c58330e66f5c1633b0a6b29af19deeb0afd200fe5389608714d43d38f6e96b0"
+        },
+        {
+          "chunk_id": 143,
+          "raiz_hash_chunk": "bf64448e90da9520acdd24c474d0849cf2c06bfa46d156b07f6c27ccdf088ed3"
+        },
+        {
+          "chunk_id": 144,
+          "raiz_hash_chunk": "69445545befc8311ec821cd1670005329e23eb48a9c4eb4bc828a6f4afb1b2b5"
+        },
+        {
+          "chunk_id": 145,
+          "raiz_hash_chunk": "9140c81c0428bf8013f6b13995b9dde9c2cfe79d0d8c1b15e941845b91ad103d"
+        },
+        {
+          "chunk_id": 146,
+          "raiz_hash_chunk": "1074b206990585fab4e7325d112d60e9e4635b550d8ce4fe04ffd0712849a3c3"
+        },
+        {
+          "chunk_id": 147,
+          "raiz_hash_chunk": "459f0285044569f1104fccad2a655d844b2eee674cb0b9aeb4f2f1257f792156"
+        },
+        {
+          "chunk_id": 148,
+          "raiz_hash_chunk": "de3c1cdb2b62eec8f95162484a798cabbb4c47566935ab3f99484676f99f8225"
+        },
+        {
+          "chunk_id": 149,
+          "raiz_hash_chunk": "b1065964e6d9bc48dcea2442557d26b488c25645084beabd4fe17b9d66d2c33e"
+        },
+        {
+          "chunk_id": 150,
+          "raiz_hash_chunk": "a9f2fad47d4fbf8a5bd9c0980d1a303c38605276332e4e29a02903096bcd6e57"
+        },
+        {
+          "chunk_id": 151,
+          "raiz_hash_chunk": "a328f0159c185a25ec017ff3f3e130b5ac22b50f7fb6744478fbf8b5a118cd33"
+        },
+        {
+          "chunk_id": 152,
+          "raiz_hash_chunk": "84c4ec299ba6062af16e1a69bd17667f70ebb9a4b64f8c435fc382516f95fe8a"
+        },
+        {
+          "chunk_id": 153,
+          "raiz_hash_chunk": "05fcd471116f072a7f1f1f3ece1bb00e989cc7b117cebaccf8e01674e9680ec0"
+        },
+        {
+          "chunk_id": 154,
+          "raiz_hash_chunk": "66acf90abeb44288a2777d60189fddcefee2320bfeaf5c77fea5fd996c7499d8"
+        },
+        {
+          "chunk_id": 155,
+          "raiz_hash_chunk": "5d7d725092c1d6a66bef804b16a1a7fbafd3477ce3e3fafb21a1f5d9bd77d1c7"
+        },
+        {
+          "chunk_id": 156,
+          "raiz_hash_chunk": "0f0238de946681b51aea7ca7a7d1af4432a3e145fa05d76626775f93d92b0ea6"
+        },
+        {
+          "chunk_id": 157,
+          "raiz_hash_chunk": "c25324514ef9da33a6a28be7f3122a78aeacdb3325605ea621b23489f936a6af"
+        },
+        {
+          "chunk_id": 158,
+          "raiz_hash_chunk": "b32adffbb1f0dceba26342605224085903a6b2a8b6922129f51d193374f64479"
+        },
+        {
+          "chunk_id": 159,
+          "raiz_hash_chunk": "d080dd61484d2e8c561a9f0488a5a11bf43be296e9db1e0c5d2686de25c563d4"
+        },
+        {
+          "chunk_id": 160,
+          "raiz_hash_chunk": "9e3df296461a101b5cfe807681103286c4f66eaec006f1bb8aa0eb204d925375"
+        },
+        {
+          "chunk_id": 161,
+          "raiz_hash_chunk": "8b576e5e4cce4e72f7b445944e75e024d9d1c0df3ebc050e11bb99b05958cd77"
+        },
+        {
+          "chunk_id": 162,
+          "raiz_hash_chunk": "75baeb8588a7ea8cda861c80a2ae536ca4c1af35085b9a0374aa5a279243e28e"
+        },
+        {
+          "chunk_id": 163,
+          "raiz_hash_chunk": "47f977908a2b07442a92eedba2551a447b171263df0bd47f91e27f47b36796b6"
+        },
+        {
+          "chunk_id": 164,
+          "raiz_hash_chunk": "2e39d568e027391a031aaeb18e698e7489984c896c77552d53b600418b44d833"
+        },
+        {
+          "chunk_id": 165,
+          "raiz_hash_chunk": "d2f53a24a6c2ce85b9f20d09df74b209cb5bf36ea987b9dc29bcb50c594fc610"
+        },
+        {
+          "chunk_id": 166,
+          "raiz_hash_chunk": "a3d7d9d6e1fc071d14d09c70f2a37058ef5f095d6da343ad62ec7c310299fca7"
+        },
+        {
+          "chunk_id": 167,
+          "raiz_hash_chunk": "fcefd3526aa6e028c7ee1876c6628fb9ac9ff0f841809e7b8a7253f00cf680f3"
+        },
+        {
+          "chunk_id": 168,
+          "raiz_hash_chunk": "05f4bf715b7f6b1d3b3844031210a242f6a6925fde9d4c648ccd7d2c83b21464"
+        },
+        {
+          "chunk_id": 169,
+          "raiz_hash_chunk": "3d6a5e8cf4cf28b66f3bbdcc8bfcee05467b697d644a2be9dfdb498756a65e04"
+        },
+        {
+          "chunk_id": 170,
+          "raiz_hash_chunk": "d3f3fb33f32601a8613dfc3dfe70e42a86d0a4f4eb8195617371758d0bf36c3f"
+        },
+        {
+          "chunk_id": 171,
+          "raiz_hash_chunk": "914d66593348014402366dfc34194f2f125bc356291464c8e3dc835b76a7da70"
+        },
+        {
+          "chunk_id": 172,
+          "raiz_hash_chunk": "8cf3c08ee34dd660d7e0c3c87d696ba6959dfa4bef4cc55f15df1eb1f9ebd691"
+        },
+        {
+          "chunk_id": 173,
+          "raiz_hash_chunk": "e80d0c25f3a1db2a5da338a73987b81722a20b56b48ec8261e6488a6a6c7d272"
+        },
+        {
+          "chunk_id": 174,
+          "raiz_hash_chunk": "67f44db8a13e25dc08ae159132ee05aa61f7f7cac4e68ddb8353d89f0c7d7fbf"
+        },
+        {
+          "chunk_id": 175,
+          "raiz_hash_chunk": "89a072ef8c91beee929f1d97d5ba1812f043fb4dc6b05cbb15df027b4557c760"
+        },
+        {
+          "chunk_id": 176,
+          "raiz_hash_chunk": "e117d158072d4e1a62f1e61b27c961821af381ed1f5f1f8d0501149b80e4541d"
+        },
+        {
+          "chunk_id": 177,
+          "raiz_hash_chunk": "257636add937586b0c69876270614a9806da5902e8aee324d7b4747cbf35d80d"
+        },
+        {
+          "chunk_id": 178,
+          "raiz_hash_chunk": "89ed21fd9644ddfb405ba496d5faf4ab05a7e10a2a762d9e64ff06f0054bfe25"
+        },
+        {
+          "chunk_id": 179,
+          "raiz_hash_chunk": "c375a197379799f12207b3d625175bb6f0091baf646963a0dd29119b20cbd6cb"
+        },
+        {
+          "chunk_id": 180,
+          "raiz_hash_chunk": "61307db065e749c966e18ea346c7dd4b59d2b63a0f7ac12fcad3f1c699b04534"
+        },
+        {
+          "chunk_id": 181,
+          "raiz_hash_chunk": "ba2f067739110b3620ff26916ece147460942edef00a7430e8b2a6c784da40a2"
+        },
+        {
+          "chunk_id": 182,
+          "raiz_hash_chunk": "29a0a0106b0ea7f1c2994b69e2c06026a63b607387b8ce4fbe8331a9843f1545"
+        },
+        {
+          "chunk_id": 183,
+          "raiz_hash_chunk": "7049f28e7a47cf5224c2925d52bb47a7731f2aa217ca1645901e34d8700a35cd"
+        },
+        {
+          "chunk_id": 184,
+          "raiz_hash_chunk": "bda00678c641d14742cc0f9dc0d2fe17bf0f5871a0a96d634ae837160501a2d3"
+        },
+        {
+          "chunk_id": 185,
+          "raiz_hash_chunk": "89bf02a97a40c5473556f13d63f9284cbf7db27916a287c9b361df77624e8f2a"
+        },
+        {
+          "chunk_id": 186,
+          "raiz_hash_chunk": "85ebe8603397b3fb724d7c6f6eeb650d7f352b4652c08324a0b5d15a68184ffc"
+        },
+        {
+          "chunk_id": 187,
+          "raiz_hash_chunk": "233722871db10127e3173071f49844323e87586ec4fa0b11697629e49787a574"
+        },
+        {
+          "chunk_id": 188,
+          "raiz_hash_chunk": "db3c91d88271827b31ca1d947000ffe6cefb200f4de634529bd2d2856cf1cee6"
+        },
+        {
+          "chunk_id": 189,
+          "raiz_hash_chunk": "478f59290b05d968ff20131d13283942e29cbeb8862ecb4ccf995ee0874719bc"
+        },
+        {
+          "chunk_id": 190,
+          "raiz_hash_chunk": "edd18527e15355e4f0f380c90ce45a1d311da4103967622e66ce92defc285be6"
+        },
+        {
+          "chunk_id": 191,
+          "raiz_hash_chunk": "71bfd81801ea73a0c7bfe6db32d7f3a0cd74d248105d09bdc4ed430230fb2d80"
+        },
+        {
+          "chunk_id": 192,
+          "raiz_hash_chunk": "9c0c65b550f5ff09b4f1fe92e1f82439b07c07d9b9c61d078c2b809c953d81bc"
+        },
+        {
+          "chunk_id": 193,
+          "raiz_hash_chunk": "51769ba0f2170dc31fda450c920b4c0c068569ec9535c2ec12671307528a1b29"
+        },
+        {
+          "chunk_id": 194,
+          "raiz_hash_chunk": "49591fdeb7e9434b7c1ba0dbe706f71b7cc8a7649b49039198eeaba1f7e4afbf"
+        },
+        {
+          "chunk_id": 195,
+          "raiz_hash_chunk": "1b562d0f08d68b4ff632b0ae348c6dc1235a6aad2c9291d50a71fa67a8974c64"
+        },
+        {
+          "chunk_id": 196,
+          "raiz_hash_chunk": "d36240a0ec45e22ec38e1e3e98a9c9298d57b87f721bbc91e5c41bddbb414f82"
+        },
+        {
+          "chunk_id": 197,
+          "raiz_hash_chunk": "64aa9811ee84670b8d37bfe62c4bb1d581bbdc0a79d455b936c64c7638884926"
+        },
+        {
+          "chunk_id": 198,
+          "raiz_hash_chunk": "7fd35b69b5c8d9c6bccbab3a33ae1a8a64b58e2f48f5a3764ca76e4572067b26"
+        },
+        {
+          "chunk_id": 199,
+          "raiz_hash_chunk": "d134e4754a28c9b94998e154431cc09be183429e22d553ff6e9b720a4bbb79ef"
+        },
+        {
+          "chunk_id": 200,
+          "raiz_hash_chunk": "28796cb27be5f0ea14b2f2e945a8d3dd5eb6df7eb031be10caef9e69de45d8b9"
+        },
+        {
+          "chunk_id": 201,
+          "raiz_hash_chunk": "dd7020996a0725520579fd5bb040c9e5e4b3f72cbd76c03327a769dd7beb6f07"
+        },
+        {
+          "chunk_id": 202,
+          "raiz_hash_chunk": "9ea3a951c2cdfc82eb3a7f7f175a43b869ca408514a386f4e3a3508e85130e39"
+        },
+        {
+          "chunk_id": 203,
+          "raiz_hash_chunk": "f69dbd89b4aa48dbabab3454cce694a755cf1be850915954b210dbd356ffc230"
+        },
+        {
+          "chunk_id": 204,
+          "raiz_hash_chunk": "dbcc6c1d7823046ee1be753bd98c3bcaa2cdc9afe17899d013663c548a9f9b70"
+        },
+        {
+          "chunk_id": 205,
+          "raiz_hash_chunk": "124f3b401b6d9ce9b03ecdda146694d652cae06bc217fa69525f82fd7704aa3e"
+        },
+        {
+          "chunk_id": 206,
+          "raiz_hash_chunk": "d76505a3125f0530186e3d50905c1a12cf29dce82c132eab862559bfce209f5a"
+        },
+        {
+          "chunk_id": 207,
+          "raiz_hash_chunk": "9c57024c82f472257ea8492ce157460a49bc8cc02f3fe47adc9e33806517acf1"
+        },
+        {
+          "chunk_id": 208,
+          "raiz_hash_chunk": "7fedb51ed5d9844c0b7415ae78ae1d5810e7f022cbfd7e3ff627e7539728a9fa"
+        },
+        {
+          "chunk_id": 209,
+          "raiz_hash_chunk": "2cfb024a506bef9aeb732f50dbd4dc8c7fd99d7495e5486a5d12b5cfd4fa2b0b"
+        },
+        {
+          "chunk_id": 210,
+          "raiz_hash_chunk": "1900a6fb649bdbcbc7afa68f9f2fffcd2552a90b450a6ffc2f330c843ce2cc3b"
+        },
+        {
+          "chunk_id": 211,
+          "raiz_hash_chunk": "17977eaee1107d9330aa72c601c5f18d521e6897c2d461be9807c1d24f233510"
+        },
+        {
+          "chunk_id": 212,
+          "raiz_hash_chunk": "b2b38e0f0d624ce46d14774479d04d04dc7a179e5ef799e0c95b26b3c58c4cae"
+        },
+        {
+          "chunk_id": 213,
+          "raiz_hash_chunk": "451069e9ee94274df39d66bdac22f8ae36f8026c1ec8a7f130ac1c5b2cdd284e"
+        },
+        {
+          "chunk_id": 214,
+          "raiz_hash_chunk": "e80c821fc6c9490a487716c089ff802b0ca2c900044dab61515b2b837de30d2e"
+        },
+        {
+          "chunk_id": 215,
+          "raiz_hash_chunk": "3bf3b302e9c45a9184ec040ea01461455dfc8340bbf6741c2e3975b7f5d899d9"
+        },
+        {
+          "chunk_id": 216,
+          "raiz_hash_chunk": "87a96712d4ff9646a6e14a11f0d53792be18fb20ce20fdd5f249ad695e98b1c3"
+        },
+        {
+          "chunk_id": 217,
+          "raiz_hash_chunk": "69ff26a4e45e48e76b2afa4615fb7329d26dbb2a8c67c2cc501167843ddafba6"
+        },
+        {
+          "chunk_id": 218,
+          "raiz_hash_chunk": "42424240e9fceae64561b64dbc6f0ab31f0879d0ff4bfe8eb16593bc244d8d8f"
+        },
+        {
+          "chunk_id": 219,
+          "raiz_hash_chunk": "f2563693a1db6a01bb8c7db8fe6aabc64cdf3bb8a486cdda238bf9637edb02eb"
+        },
+        {
+          "chunk_id": 220,
+          "raiz_hash_chunk": "c91c8a927d1b5baf3c25addc3ad87a0c98e0304f0c9b81154175ddb35b69f0f8"
+        },
+        {
+          "chunk_id": 221,
+          "raiz_hash_chunk": "29818c5936191a4866d3b01bc6032bcb8a2cc23f8c7b35b11394945a122335dc"
+        },
+        {
+          "chunk_id": 222,
+          "raiz_hash_chunk": "e0e637cced48ad2fa04b1a228974342b80c0bc041873c3da10c714f134057c22"
+        },
+        {
+          "chunk_id": 223,
+          "raiz_hash_chunk": "a52bd772a6bc032863f116d3fa7bdabcfc70cedb19e9d20b1b235895943bb444"
+        },
+        {
+          "chunk_id": 224,
+          "raiz_hash_chunk": "8614d750b708332d2a11ec7c0676b36aac7a7332a1707a5b15b2dd5379cfc7cf"
+        },
+        {
+          "chunk_id": 225,
+          "raiz_hash_chunk": "3fedc552b66f51e1b6495a67d90a9bde25e6961a514be14e89863353d2dd7b77"
+        },
+        {
+          "chunk_id": 226,
+          "raiz_hash_chunk": "a905ba7069cfa64a6edac3c766b59ea9abd7143e2099612e1cfeaf207e00a60f"
+        },
+        {
+          "chunk_id": 227,
+          "raiz_hash_chunk": "9fe0419f87b5d0843ca8cc4a47801e2df28cdb5ba03d986c643fba78e81f7f24"
+        },
+        {
+          "chunk_id": 228,
+          "raiz_hash_chunk": "1623353ab91efac8dbd43d46748cd0f42453ff71347ce220470969d940a5be8d"
+        },
+        {
+          "chunk_id": 229,
+          "raiz_hash_chunk": "696a5c75ffe9779f16c4e186e30279eef5327380b5614087302d907ca25ed5bc"
+        },
+        {
+          "chunk_id": 230,
+          "raiz_hash_chunk": "fa16fbaf6346b1ea5bc2a3d59d86b5eb95beb8d7c65cc2c00811d94eb19747e7"
+        },
+        {
+          "chunk_id": 231,
+          "raiz_hash_chunk": "b5b57a9c7c39925e25bb3452e8c499929966de9561b9b309cca9e0755d4e6eb1"
+        },
+        {
+          "chunk_id": 232,
+          "raiz_hash_chunk": "1ef71e5455802eb54041d8b5b80e0ed9aa15365af4cf26e8b0135bb80efbbf23"
+        },
+        {
+          "chunk_id": 233,
+          "raiz_hash_chunk": "f9c4c2ba116821de2c80c27d40349261619bc27cdcda5d8e36a52169fbf8d0b9"
+        },
+        {
+          "chunk_id": 234,
+          "raiz_hash_chunk": "7bbfecea14501380611bd2b7f0ac945fcc20f3435171b018977c793cabaf537d"
+        },
+        {
+          "chunk_id": 235,
+          "raiz_hash_chunk": "c6228ca8623f6dd6b4be8dbb14c8689a0601ef1e0d33ca5526c1d8f44fbdb28e"
+        },
+        {
+          "chunk_id": 236,
+          "raiz_hash_chunk": "bc4ba745d3b10f7fa1bd8b2849576c3b5f6d5f8b2664f311c1b4723f42223b1f"
+        },
+        {
+          "chunk_id": 237,
+          "raiz_hash_chunk": "fa17f18837eb653fdc41cff227dabb3b0e9dc6af3776fadb33734789deaa8099"
+        },
+        {
+          "chunk_id": 238,
+          "raiz_hash_chunk": "a32cbfa5aa25b1a706957d4ea1137c99abd83f67fd408f078c63a2d9f8d9ec03"
+        },
+        {
+          "chunk_id": 239,
+          "raiz_hash_chunk": "20ad46eff675358392f0f901c6739e3b8d8a5bc24b01aab2127cba84c2d69b15"
+        }
+      ]
+    },
+    "mensajes_dlq": 0,
+    "tiempo_muro_corrida_s": 47.5,
+    "invocaciones_worker_medidas": 261,
+    "duracion_media_worker_ms": 1061.47,
+    "memoria_max_worker_mb": 153.0,
+    "k_cloudwatch_e2e_ordenes_s": 4710.44,
+    "k_emf_core_ordenes_s": 14279.66,
+    "total_billed_ms": 292540.0,
+    "gb_s_consumidos": 505.37,
+    "costo_lambda_real_usd": 0.0067,
+    "costo_total_corrida_usd": 0.0189,
+    "coincidencias_pii_rnf05": 0,
+    "verificacion_raiz_chunk0_ok": true
+  },
+  "t6_iceberg_athena": {
+    "database": "saom_analytics",
+    "tabla_iceberg": "saom_analytics.adjudicaciones",
+    "filas_tras_primer_merge": 1200000,
+    "filas_tras_segundo_merge": 1200000,
+    "idempotencia_merge_ok": true,
+    "consulta_por_entidad_emisora": [
+      [
+        "entidad_emisora",
+        "dictamen",
+        "ordenes",
+        "total_reclamado",
+        "total_aprobado"
+      ],
+      [
+        "Centro Médico Aurora",
+        "CUBRE",
+        "78069",
+        "9368650242.00",
+        "5718820549.25"
+      ],
+      [
+        "Centro Médico Aurora",
+        "NO_CUBRE",
+        "41843",
+        "148246137111.00",
+        "0.00"
+      ],
+      [
+        "Clínica Aliada Santa Elena",
+        "CUBRE",
+        "78082",
+        "9365333296.00",
+        "5733290754.00"
+      ],
+      [
+        "Clínica Aliada Santa Elena",
+        "NO_CUBRE",
+        "42162",
+        "149619077666.00",
+        "0.00"
+      ],
+      [
+        "Clínica Integral San Gregor",
+        "CUBRE",
+        "78283",
+        "9402086000.00",
+        "5762450112.50"
+      ],
+      [
+        "Clínica Integral San Gregor",
+        "NO_CUBRE",
+        "41923",
+        "149519106740.00",
+        "0.00"
+      ]
+    ],
+    "consulta_por_medio_emisor": [
+      [
+        "medio_emisor",
+        "ordenes",
+        "total_reclamado",
+        "total_aprobado"
+      ],
+      [
+        "Portal Ciudadano",
+        "336326",
+        "444237492166.00",
+        "16056799788.75"
+      ],
+      [
+        "Hospital Público",
+        "240427",
+        "317767457864.00",
+        "11498647265.75"
+      ],
+      [
+        "App Móvil Salud",
+        "216232",
+        "285142528571.00",
+        "10337148686.25"
+      ],
+      [
+        "Clínica Aliada",
+        "143938",
+        "190275498761.00",
+        "6860234214.75"
+      ],
+      [
+        "Farmacia Aliada",
+        "95818",
+        "127393050151.00",
+        "4586382661.00"
+      ],
+      [
+        "Call Center",
+        "83696",
+        "109398141612.00",
+        "4012726904.25"
+      ],
+      [
+        "Ventanilla Física",
+        "83563",
+        "109645721184.00",
+        "3976963943.25"
+      ]
+    ],
+    "consulta_por_dia": [
+      [
+        "dia_solicitud",
+        "ordenes",
+        "total_reclamado",
+        "total_aprobado"
+      ],
+      [
+        "2026-05-04",
+        "402000",
+        "529215196182.00",
+        "19155939616.75"
+      ],
+      [
+        "2026-05-05",
+        "396000",
+        "522711751027.00",
+        "18950939658.50"
+      ],
+      [
+        "2026-05-06",
+        "402000",
+        "531932943100.00",
+        "19222024188.75"
+      ]
+    ],
+    "verificacion_3_niveles_muestra": [
+      {
+        "id_solicitud": "CHV-0000001",
+        "hash_iceberg": "fd94a57f2baba2dbd7c381b1983a05ce6f8a956b77bea375052e59b1c895a6af",
+        "hash_recalculado_nivel_1": "fd94a57f2baba2dbd7c381b1983a05ce6f8a956b77bea375052e59b1c895a6af",
+        "nivel_1_ok": true,
+        "nivel_2_ok": true,
+        "nivel_3_ok": true
+      },
+      {
+        "id_solicitud": "CHV-0000002",
+        "hash_iceberg": "c34c069ad05c55dab953b0837463c0206d9994c1612e3e645c2c781314be7a67",
+        "hash_recalculado_nivel_1": "c34c069ad05c55dab953b0837463c0206d9994c1612e3e645c2c781314be7a67",
+        "nivel_1_ok": true,
+        "nivel_2_ok": true,
+        "nivel_3_ok": true
+      },
+      {
+        "id_solicitud": "CHV-0000003",
+        "hash_iceberg": "41980f2d4358ea8d3043b43ecadf9f0ad789b60cf118579139f24fecd5782ba9",
+        "hash_recalculado_nivel_1": "41980f2d4358ea8d3043b43ecadf9f0ad789b60cf118579139f24fecd5782ba9",
+        "nivel_1_ok": true,
+        "nivel_2_ok": true,
+        "nivel_3_ok": true
+      },
+      {
+        "id_solicitud": "CHV-0000004",
+        "hash_iceberg": "ec5e40399cc42965809881dd78b23ad2630f5e1193f2a6326748111ced7b836f",
+        "hash_recalculado_nivel_1": "ec5e40399cc42965809881dd78b23ad2630f5e1193f2a6326748111ced7b836f",
+        "nivel_1_ok": true,
+        "nivel_2_ok": true,
+        "nivel_3_ok": true
+      },
+      {
+        "id_solicitud": "CHV-0000005",
+        "hash_iceberg": "142c2046b098973376926ee17a04fce6a6c378d6b184fae93a39ad68d2b92309",
+        "hash_recalculado_nivel_1": "142c2046b098973376926ee17a04fce6a6c378d6b184fae93a39ad68d2b92309",
+        "nivel_1_ok": true,
+        "nivel_2_ok": true,
+        "nivel_3_ok": true
+      }
+    ]
+  }
+}

@@ -55,27 +55,28 @@
 
 ---
 
-## 3. Medición Empírica de Throughput $k$ y Recálculo $M/M/c$ hacia 12 Millones (`RNF-01`)
+## 3. Medición Empírica de Throughput $k$ en AWS CloudWatch y Recálculo $M/M/c$ hacia 12 Millones (`RNF-01`)
 
-Procesando bloques completos de 5.000 órdenes con la cadena íntegra de `saom_core.py` (validación + `HMAC-SHA256` + enmascaramiento `#` + extracción con spans + dictamen `COV-001..020` + liquidación `Decimal` + firma `SHA-256` sobre JSON canónico + serialización JSONL y hash SHA-256 del chunk):
+En la corrida real del dataset oficial `LOTE-COIL-1200K` (`1.200.000` solicitudes en `240` chunks de 5.000 órdenes sobre AWS Lambda `arm64` de `1.769 MB` en la cuenta `329771219583`, ver [`T3_T4_T6_ejecucion_real_aws.md`](T3_T4_T6_ejecucion_real_aws.md)):
 
-- **Tiempo medio de CPU + serialización JSONL por chunk (5.000 órdenes)**: **`0.2022 s`** ($k_{\text{CPU}} = 24731.82\text{ órdenes/s/vCPU}$).
-- **Tiempo efectivo por chunk incluyendo I/O de red S3 (`GetObject Range` + `PutObject`) y DynamoDB (`TransactWriteItems`, +1,20 s)**: **`1.4022 s`** ($k_{\text{E2E}} = 3565.90\text{ órdenes/s/vCPU}$), superando ampliamente la hipótesis conservadora de diseño $k \ge 400\text{ órdenes/s/vCPU}$ (`P-07`).
+- **Duración media real por chunk en CloudWatch (`REPORT Duration`, incluyendo lectura S3 Range + adjudicación + escritura S3 + `TransactWriteItems` en DynamoDB)**: **`1.061,60 ms` (`1,0616 s`)**.
+- **Throughput E2E real medido en AWS CloudWatch ($k_{\text{AWS-E2E}}$)**: **`4.710,44 órdenes/s/vCPU`** (y **`14.279,66 órdenes/s/vCPU`** en el núcleo puro de adjudicación según la métrica EMF `ThroughputOrdenesPorSegundo`), superando **11,8 veces** la hipótesis conservadora de diseño $k \ge 400\text{ órdenes/s/vCPU}$ (`P-07`).
+- **Tiempo de reloj (muro) de la corrida de 1,2M en AWS (`MaximumConcurrency=10`)**: **`47,50 segundos`** (frente al SLA de `2,4 horas` de `P-16`).
 
 | Escenario y Ventana (12M órdenes) | $\lambda$ (órdenes/s) | $k$ (órd/s/vCPU) | $N$ workers ($M/M/c$) | Utilización $\rho$ | $P(\text{espera})$ | $W_q$ (cola) | Tiempo servicio / chunk |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| **Hipótesis Conservadora `P-07` — 24 h** | 138.89 | 400.00 | **1** | 0.3472 | 0.3472 | 6.649 s | 12.5 s |
-| **Hipótesis Conservadora `P-07` — 3 h** | 1111.11 | 400.00 | **4** (`c=10` con 2,5x) | 0.6944 | 0.4201 | 4.296 s | 12.5 s |
-| **Medición Empírica E2E — 24 h** | 138.89 | 3565.9 | **1** | 0.0389 | 0.0389 | 0.057 s | 1.4 s |
-| **Medición Empírica E2E — 3 h** | 1111.11 | 3565.9 | **1** (`c=10` configurado) | 0.3116 | 0.3116 | 0.635 s | 1.4 s |
+| **Hipótesis Conservadora `P-07` — 24 h** | 138.89 | 400.00 | **1** | 0.3472 | 0.3472 | 6.649 s | 12.50 s |
+| **Hipótesis Conservadora `P-07` — 3 h** | 1111.11 | 400.00 | **4** (`c=10` con 2,5x) | 0.6944 | 0.4201 | 4.296 s | 12.50 s |
+| **Medición Real AWS CloudWatch — 24 h** | 138.89 | 4710.44 | **1** | 0.0295 | 0.0295 | 0.032 s | 1.06 s |
+| **Medición Real AWS CloudWatch — 3 h** | 1111.11 | 4710.44 | **1** (`c=10` configurado) | 0.2359 | 0.2359 | 0.328 s | 1.06 s |
 
 ---
 
-## 4. Costo Real Estimado con el $k$ Medido frente al Presupuesto de 50 USD (`RNF-03`)
+## 4. Costo Real Medido en AWS frente al Presupuesto de 50 USD (`RNF-03`)
 
 | Escenario | Cómputo Lambda Arm64 | S3 + SQS + DynamoDB + Athena | Costo Total Nube | Costo por Millón | Meta `RNF-03` ($\le 0,50\text{ USD/M}$) |
 | :--- | ---: | ---: | ---: | ---: | :--- |
-| **Corrida Prototipo (1,2M · 240 chunks, $k=400$ conservador)** | 0.0691 USD | 0,0122 USD | **0.0813 USD** | 0.0734 USD/M | **CUMPLE** (0,59 % del crédito de 50 USD) |
-| **Corrida Prototipo (1,2M · 240 chunks, $k_{\text{E2E}}$ medido)** | 0.0078 USD | 0,0122 USD | **0.0200 USD** | 0.0223 USD/M | **CUMPLE** (< 0,15 % del crédito de 50 USD) |
-| **Producción Licitación (12M · 2.400 chunks, $k=400$ conservador)** | 0.6910 USD | 0,1896 USD | **0.8806 USD** | **0.0734 USD/M** | **CUMPLE** |
-| **Producción Licitación (12M · 2.400 chunks, $k_{\text{E2E}}$ medido)** | 0.0775 USD | 0,1896 USD | **0.2671 USD** | **0.0223 USD/M** | **CUMPLE** |
+| **Corrida Real Prototipo en AWS (1,2M · 240 chunks, `505,37 GB-s`)** | **0.0067 USD** | 0,0122 USD | **0.0189 USD** | **0.0158 USD/M** | **CUMPLE** (0,038 % del crédito de 50 USD) |
+| **Corrida Prototipo ($k=400$ conservador de diseño)** | 0.0691 USD | 0,0122 USD | **0.0813 USD** | 0.0734 USD/M | **CUMPLE** |
+| **Producción Licitación (12M · 2.400 chunks, con $k_{\text{AWS}}=4.710,44$)** | **0.0587 USD** | 0,1896 USD | **0.2483 USD** | **0.0207 USD/M** | **CUMPLE** |
+| **Producción Licitación (12M · 2.400 chunks, con $k=400$ conservador)** | 0.6910 USD | 0,1896 USD | **0.8806 USD** | **0.0734 USD/M** | **CUMPLE** |

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import re
 import time
 import urllib.parse
@@ -510,6 +511,7 @@ def consolidar_y_cerrar_lote(
     meta_resp = ddb_client.get_item(
         TableName=DDB_TABLE_CONTROL,
         Key={"PK": {"S": pk}, "SK": {"S": "META"}},
+        ConsistentRead=True,
     )
     meta = meta_resp.get("Item")
     if not meta:
@@ -520,10 +522,11 @@ def consolidar_y_cerrar_lote(
     if chunks_totales <= 0 or chunks_completados < chunks_totales:
         return None
 
-    # Consultar todos los items CHUNK# del lote
+    # Consultar todos los items CHUNK# del lote con lectura fuertemente consistente
     items_chunks: List[Dict[str, Any]] = []
     kwargs_query: Dict[str, Any] = {
         "TableName": DDB_TABLE_CONTROL,
+        "ConsistentRead": True,
         "KeyConditionExpression": "PK = :pk AND begins_with(SK, :sk_prefix)",
         "ExpressionAttributeValues": {
             ":pk": {"S": pk},
@@ -745,72 +748,85 @@ def worker_adjudicador_handler(event: Dict[str, Any], context: Any = None) -> Di
                 Body=body_rech.encode("utf-8"),
             )
 
-        # Idempotencia condicional en DynamoDB (sección 7.2 y RNF-06)
+        # Idempotencia condicional en DynamoDB con reintento ante TransactionConflict sobre META (RNF-06)
         es_duplicado = False
-        try:
-            ddb.transact_write_items(
-                TransactItems=[
-                    {
-                        "Put": {
-                            "TableName": DDB_TABLE_CONTROL,
-                            "Item": {
-                                "PK": {"S": f"LOTE#{lote_id}"},
-                                "SK": {"S": f"CHUNK#{chunk_id:05d}"},
-                                "estado": {"S": "COMPLETADO"},
-                                "n_ordenes": {"N": str(total_ordenes_chunk)},
-                                "ordenes_validas": {"N": str(resultado.ordenes_validas)},
-                                "ordenes_rechazadas": {"N": str(resultado.ordenes_rechazadas)},
-                                "ordenes_cubiertas": {"N": str(resultado.ordenes_cubiertas)},
-                                "ordenes_no_cubiertas": {"N": str(resultado.ordenes_no_cubiertas)},
-                                "ordenes_incertidumbre": {
-                                    "N": str(resultado.ordenes_incertidumbre)
+        for intento in range(8):
+            try:
+                ddb.transact_write_items(
+                    TransactItems=[
+                        {
+                            "Put": {
+                                "TableName": DDB_TABLE_CONTROL,
+                                "Item": {
+                                    "PK": {"S": f"LOTE#{lote_id}"},
+                                    "SK": {"S": f"CHUNK#{chunk_id:05d}"},
+                                    "estado": {"S": "COMPLETADO"},
+                                    "n_ordenes": {"N": str(total_ordenes_chunk)},
+                                    "ordenes_validas": {"N": str(resultado.ordenes_validas)},
+                                    "ordenes_rechazadas": {"N": str(resultado.ordenes_rechazadas)},
+                                    "ordenes_cubiertas": {"N": str(resultado.ordenes_cubiertas)},
+                                    "ordenes_no_cubiertas": {
+                                        "N": str(resultado.ordenes_no_cubiertas)
+                                    },
+                                    "ordenes_incertidumbre": {
+                                        "N": str(resultado.ordenes_incertidumbre)
+                                    },
+                                    "suma_reclamada": {"N": f"{resultado.suma_reclamada:.2f}"},
+                                    "suma_aprobada": {"N": f"{resultado.suma_aprobada:.2f}"},
+                                    "raiz_hash_chunk": {"S": resultado.raiz_hash_chunk},
+                                    "clave_resultado": {"S": staging_key},
+                                    "clave_recibos": {"S": recibos_key},
+                                    "duracion_ms": {"N": f"{duracion_ms:.2f}"},
+                                    "k_ordenes_seg": {"N": f"{throughput_k:.2f}"},
                                 },
-                                "suma_reclamada": {"N": f"{resultado.suma_reclamada:.2f}"},
-                                "suma_aprobada": {"N": f"{resultado.suma_aprobada:.2f}"},
-                                "raiz_hash_chunk": {"S": resultado.raiz_hash_chunk},
-                                "clave_resultado": {"S": staging_key},
-                                "clave_recibos": {"S": recibos_key},
-                                "duracion_ms": {"N": f"{duracion_ms:.2f}"},
-                                "k_ordenes_seg": {"N": f"{throughput_k:.2f}"},
-                            },
-                            "ConditionExpression": (
-                                "attribute_not_exists(SK) OR estado <> :comp"
-                            ),
-                            "ExpressionAttributeValues": {":comp": {"S": "COMPLETADO"}},
-                        }
-                    },
-                    {
-                        "Update": {
-                            "TableName": DDB_TABLE_CONTROL,
-                            "Key": {"PK": {"S": f"LOTE#{lote_id}"}, "SK": {"S": "META"}},
-                            "UpdateExpression": (
-                                "ADD chunks_completados :uno, "
-                                "ordenes_validas :ov, "
-                                "ordenes_rechazadas :or, "
-                                "ordenes_incertidumbre :oi, "
-                                "suma_reclamada :sr, "
-                                "suma_aprobada :sa"
-                            ),
-                            "ExpressionAttributeValues": {
-                                ":uno": {"N": "1"},
-                                ":ov": {"N": str(resultado.ordenes_validas)},
-                                ":or": {"N": str(resultado.ordenes_rechazadas)},
-                                ":oi": {"N": str(resultado.ordenes_incertidumbre)},
-                                ":sr": {"N": f"{resultado.suma_reclamada:.2f}"},
-                                ":sa": {"N": f"{resultado.suma_aprobada:.2f}"},
-                            },
-                        }
-                    },
-                ]
-            )
-        except Exception as exc:
-            codigo_error = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
-            if codigo_error == "TransactionCanceledException" or "TransactionCanceledException" in str(
-                exc
-            ):
-                es_duplicado = True
-                duplicados_ignorados += 1
-            else:
+                                "ConditionExpression": (
+                                    "attribute_not_exists(SK) OR estado <> :comp"
+                                ),
+                                "ExpressionAttributeValues": {":comp": {"S": "COMPLETADO"}},
+                            }
+                        },
+                        {
+                            "Update": {
+                                "TableName": DDB_TABLE_CONTROL,
+                                "Key": {"PK": {"S": f"LOTE#{lote_id}"}, "SK": {"S": "META"}},
+                                "UpdateExpression": (
+                                    "ADD chunks_completados :uno, "
+                                    "ordenes_validas :ov, "
+                                    "ordenes_rechazadas :or, "
+                                    "ordenes_incertidumbre :oi, "
+                                    "suma_reclamada :sr, "
+                                    "suma_aprobada :sa"
+                                ),
+                                "ExpressionAttributeValues": {
+                                    ":uno": {"N": "1"},
+                                    ":ov": {"N": str(resultado.ordenes_validas)},
+                                    ":or": {"N": str(resultado.ordenes_rechazadas)},
+                                    ":oi": {"N": str(resultado.ordenes_incertidumbre)},
+                                    ":sr": {"N": f"{resultado.suma_reclamada:.2f}"},
+                                    ":sa": {"N": f"{resultado.suma_aprobada:.2f}"},
+                                },
+                            }
+                        },
+                    ]
+                )
+                break
+            except Exception as exc:
+                resp_err = getattr(exc, "response", {})
+                codigo_error = resp_err.get("Error", {}).get("Code", "")
+                razones = resp_err.get("CancellationReasons", [])
+                es_conflicto_meta = (
+                    "TransactionConflict" in str(exc)
+                    or any(r.get("Code") == "TransactionConflict" for r in razones)
+                )
+                if es_conflicto_meta and intento < 7:
+                    time.sleep(0.05 * (2**intento) + random.uniform(0.01, 0.05))
+                    continue
+                if codigo_error == "TransactionCanceledException" or "TransactionCanceledException" in str(
+                    exc
+                ):
+                    es_duplicado = True
+                    duplicados_ignorados += 1
+                    break
                 raise
 
         if not es_duplicado:

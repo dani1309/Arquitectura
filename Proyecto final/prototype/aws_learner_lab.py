@@ -369,6 +369,7 @@ def desplegar_infraestructura(
         "SAOM_QUEUE_CHUNKS_URL": chunks_url,
         "SAOM_DDB_CONTROL": "control_lotes",
         "SAOM_KEY_VERSION": "hmac-2026-v1",
+        "SAOM_HMAC_SECRET_FALLBACK": "coil-chernovia-default-key-2026",
         "SAOM_CHUNK_SIZE": "5000",
     }
 
