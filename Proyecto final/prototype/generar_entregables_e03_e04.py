@@ -347,14 +347,40 @@ Siguiendo el protocolo de [`docs/verificacion/T5a_protocolo_etiquetado_y_spans.m
 | `Medicacion` | `1,0000` | `0,9737` | 1.359 | 0 | 35 | 1,0000 | 0,9749 | **0,9873** |
 | **Promedio Macro** | **1,0000** | **0,9765** | — | — | — | **1,0000** | **0,9776** | **0,9886** ($\ge 0,92$) |
 
-### 5.2. Dimensionamiento $M/M/c$ y Costo Proyectado para 12 Millones de Órdenes (`RNF-01` y `RNF-03`)
+### 5.2. Diferenciación entre Rendimiento Medido (`1,2M`) y Proyectado (`12M`) — Derivación de los `4,25 min` y `7,92 min`
 
-| Escenario (12.000.000 de órdenes · 2.400 chunks) | $\lambda$ (órd/s) | $k$ (órd/s/vCPU) | $N$ workers ($M/M/c$) | Utilización $\rho$ | $W_q$ en cola | Tiempo de drenaje con `c=10` | Costo Total Nube (12M) | Costo por Millón |
-| :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| **Hipótesis Conservadora `P-07` — Ventana 24 h** | 138,89 | 400,00 | **1** | 0,3472 | 6,649 s | 50,0 min | 0,8806 USD | 0,0734 USD/M |
-| **Hipótesis Conservadora `P-07` — Ventana 3 h** | 1.111,11 | 400,00 | **4** (`c=10` con 2,5x) | 0,6944 | 4,296 s | 50,0 min | 0,8806 USD | 0,0734 USD/M |
-| **Con $k$ Real AWS CloudWatch — Ventana 24 h** | 138,89 | **4.710,44** | **1** | 0,0295 | 0,032 s | **4,25 min** | **0,2483 USD** | **0,0207 USD/M** |
-| **Con $k$ Real AWS CloudWatch — Ventana 3 h** | 1.111,11 | **4.710,44** | **1** (`c=10` configurado) | 0,2359 | 0,328 s | **4,25 min** | **0,2483 USD** | **0,0207 USD/M** |
+Para distinguir con rigor qué se midió empíricamente en la cuenta `329771219583` y qué se proyecta hacia los `12.000.000` de órdenes (`2.400` chunks de `5.000` órdenes), se desglosan las dos métricas temporales:
+
+1. **Rendimiento Medido en AWS (`1.200.000` órdenes · `240` chunks · `c = 10` workers)**:
+   - **Duración media E2E por chunk en CloudWatch (`REPORT Duration`)**: $T_{\text{chunk}} = 1.061,60\text{ ms} = 1,0616\text{ s}$, lo que determina un throughput unitario real por worker ($1\text{ vCPU}$) de:
+     $$k_{\text{AWS-E2E}} = \frac{5.000\text{ órdenes}}{1,0616\text{ s}} = 4.710,44\text{ órdenes/s/vCPU}$$
+   - **Tiempo de drenaje puro de cómputo en los 10 workers (`240` chunks)**: $\frac{240 \times 1,0616\text{ s}}{10} = 25,48\text{ s}$.
+   - **Tiempo de reloj extremo a extremo medido (`wall-clock`)**: **`47,50 s` (`0,79 min`)**, que suma los `25,48 s` de drenaje puro más `3,40 s` de particionamiento en streaming y `18,62 s` de *cold starts*, *polling* de SQS y *exponential backoff* en los 6 chunks con `TransactionConflict` en DynamoDB.
+2. **Rendimiento Proyectado para `12.000.000` de Órdenes (`2.400` chunks · `c = 10` workers)**:
+   - **De dónde salen los `4,25 minutos` (Tiempo de drenaje puro de cómputo en workers)**:
+     $$T_{\text{drenaje, 12M}} = \frac{N_{\text{chunks}} \times T_{\text{chunk}}}{c} = \frac{2.400\text{ chunks} \times 1,0616\text{ s/chunk}}{10\text{ workers}} = \frac{2.547,84\text{ s}}{10} = 254,78\text{ s} = \mathbf{4,25\text{ minutos}}$$
+     *(Equivalente a dividir $12.000.000\text{ órdenes}$ entre la capacidad agregada de los 10 workers: $10 \times 4.710,44 = 47.104,4\text{ órdenes/s}$).*
+   - **Tiempo de reloj extremo a extremo proyectado incluyendo sobrecarga de coordinación (`7,92 minutos`)**:
+     $$T_{\text{reloj, 12M}} = 10 \times T_{\text{reloj, 1.2M}} = 10 \times 47,50\text{ s} = 475,0\text{ s} = \mathbf{7,92\text{ minutos}}$$
+   - Tanto el tiempo de drenaje puro (**`4,25 min`**) como el tiempo de reloj extremo a extremo (**`7,92 min`**) procesan los 12 millones de órdenes en **menos de 8 minutos**, cumpliendo con amplísimo margen la meta interna del equipo ($\le 3\text{ h} = 180\text{ min}$) y el SLA de la licitación ($< 24\text{ h}$).
+
+| Escenario (12.000.000 de órdenes · 2.400 chunks) | $\lambda$ (órd/s) | $k$ (órd/s/vCPU) | $N$ workers ($M/M/c$) | Utilización $\rho$ | $W_q$ en cola | Drenaje puro (`c=10`) | Reloj E2E proyectado (`c=10`) | Costo Lote Completo (12M) | Costo Unitario por Millón |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| **Hipótesis Conservadora `P-07` — Ventana 24 h** | 138,89 | 400,00 | **1** | 0,3472 | 6,649 s | 50,00 min | ~55,00 min | 0,8806 USD | 0,0734 USD/M |
+| **Hipótesis Conservadora `P-07` — Ventana 3 h** | 1.111,11 | 400,00 | **4** (`c=10` con 2,5x) | 0,6944 | 4,296 s | 50,00 min | ~55,00 min | 0,8806 USD | 0,0734 USD/M |
+| **Con $k$ Medido en AWS — Ventana 24 h** | 138,89 | **4.710,44** | **1** | 0,0295 | 0,032 s | **4,25 min** | **7,92 min** | **0,2483 USD** (`0,1890` lineal) | **0,0207 USD/M** (`0,0158` lineal) |
+| **Con $k$ Medido en AWS — Ventana 3 h** | 1.111,11 | **4.710,44** | **1** (`c=10` configurado) | 0,2359 | 0,328 s | **4,25 min** | **7,92 min** | **0,2483 USD** (`0,1890` lineal) | **0,0207 USD/M** (`0,0158` lineal) |
+
+### 5.3. Conciliación y Unificación de las Cifras Económicas (`0,0158 USD/M`, `0,2483 USD` y `0,25–0,31 USD/M`)
+
+Para evitar cualquier confusión entre el **costo unitario por millón de órdenes (`USD/M`)** y el **costo del lote completo (`1,2M` vs. `12M`)**, la tabla siguiente concilia los cuatro valores económicos del proyecto:
+
+| Escenario Económico | Tipo de Cifra | Volumen del Lote | Cómputo Lambda Arm64 | S3 + SQS + DynamoDB + Operación | **Costo Total del Lote** | **Costo Unitario (`USD/M`)** | Explicación Coherente |
+| :--- | :---: | :---: | ---: | ---: | ---: | ---: | :--- |
+| **1. Estimado Previo de Diseño (E01/E02 con $k=400$)** | Estimado pre-ejecución | `1.200.000` (`240` chunks) | `0,0691 USD` (`~5.184 GB-s`) | `0,2309 USD` (con holgura operativa inicial) | **`~0,3000 USD`** | **`0,25 – 0,31 USD/M`** | Estimación teórica inicial en `ADR-003` y `RNF-03` (`P-06`) antes de medir $k$ en AWS, asumiendo `12,50 s/chunk` ($k=400$). |
+| **2. Corrida Real en AWS Learner Lab (`LOTE-COIL-1200K`)** | **Medido en AWS** | `1.200.000` (`240` chunks) | **`0,0067 USD`** (`505,37 GB-s` reales) | **`0,0122 USD`** (`S3` `0,0025` + `DDB` `0,0012` + `SQS` `0,0002` + `CW/Athena` `0,0083`) | **`0,0189 USD`** | **`0,0158 USD/M`** | **Costo real medido**: $\frac{0,0189\text{ USD}}{1,2\text{ M}} = \mathbf{0,0158\text{ USD/M}}$ (16x menor que el estimado previo gracias a $k=4.710,44$). |
+| **3. Escalamiento Lineal Directo `10×` (`12M`)** | Proyectado lineal puro | `12.000.000` (`2.400` chunks) | **`0,0674 USD`** (`5.053,7 GB-s`) | **`0,1216 USD`** (`10 ×` solicitudes S3, SQS, DynamoDB y CloudWatch) | **`0,1890 USD`** | **`0,0158 USD/M`** | Multiplicación directa $10 \times 0,0189\text{ USD}$ de exactamente los mismos servicios del prototipo. |
+| **4. Producción Completa `12M` con Operación** | **Proyectado producción** | `12.000.000` (`2.400` chunks) | **`0,0587 USD`** (`2.400` chunks $\times 1,0616\text{ s}$) | **`0,1896 USD`** (añade retención S3 30 días, compactación Iceberg/Athena y API Gateway) | **`0,2483 USD`** (`~0,25 USD/lote`) | **`0,0207 USD/M`** | **`0,2483 USD` (`~0,25 USD`) es el costo del lote completo de 12 millones**, equivalente a **`0,0207 USD por millón`** ($\frac{0,2483}{12}$). |
 
 ---
 
@@ -463,6 +489,30 @@ La tabla Iceberg `saom_analytics.adjudicaciones` consolidó las **`1.200.000` ó
 #### Evidencia en AWS Console: Consulta SQL SELECT COUNT en Amazon Athena
 ![Evidencia en Amazon Athena: Consulta SELECT COUNT a la tabla Iceberg adjudicaciones](../../docs/verificacion/screenshots/aws_athena_iceberg_1200k.png)
 
+### 4.3. Justificación de la Extrapolación a 12 Millones: Rendimiento Medido (`1,2M`) vs. Proyectado (`12M`)
+
+Para distinguir con absoluta precisión qué se midió en vivo en AWS (`1.200.000` órdenes = `240` chunks) y cómo se proyecta el comportamiento para el lote completo de la licitación (`12.000.000` de órdenes = `2.400` chunks de `5.000` órdenes con `c = 10` workers), se presenta la derivación paso a paso:
+
+| Métrica | Naturaleza | Escala | Valor | Derivación / Origen |
+| :--- | :---: | :---: | ---: | :--- |
+| **Duración media por chunk ($T_{\text{chunk}}$)** | **Medido (CloudWatch)** | 1 chunk (`5.000` órd.) | **`1.061,60 ms`** (`1,0616 s`) | Promedio de `REPORT Duration` en `saom-worker` (`1.769 MB` = `1 vCPU`). |
+| **Throughput unitario E2E ($k_{\text{AWS-E2E}}$)** | **Medido (CloudWatch)** | 1 worker (`1 vCPU`) | **`4.710,44 órd/s/vCPU`** | $k_{\text{AWS-E2E}} = \frac{5.000\text{ órd.}}{1,0616\text{ s}} = 4.710,44\text{ órd/s/vCPU}$. |
+| **Tiempo de drenaje puro de cómputo (`1,2M`)** | **Medido (CloudWatch)** | `1,2M` (`240` chunks, `c=10`) | **`25,48 s`** (`0,42 min`) | $\frac{240\text{ chunks} \times 1,0616\text{ s}}{10\text{ workers}} = 25,48\text{ s}$ de trabajo efectivo en workers. |
+| **Tiempo de reloj extremo a extremo (`1,2M`)** | **Medido (Reloj E2E)** | `1,2M` (`240` chunks, `c=10`) | **`47,50 s`** (`0,79 min`) | Incluye los `25,48 s` de drenaje + `3,40 s` del particionador + `18,62 s` de *cold starts*, colas SQS y *backoff* en 6 chunks con `TransactionConflict`. |
+| **Tiempo de drenaje puro de cómputo (`12M`)** | **Proyectado ($M/M/c$)** | `12M` (`2.400` chunks, `c=10`) | **`254,78 s` (`4,25 min`)** | $\frac{2.400\text{ chunks} \times 1,0616\text{ s}}{10\text{ workers}} = \frac{12.000.000\text{ órd.}}{47.104,4\text{ órd/s}} = 254,78\text{ s} = \mathbf{4,25\text{ min}}$. |
+| **Tiempo de reloj extremo a extremo (`12M`)** | **Proyectado (Lineal E2E)** | `12M` (`2.400` chunks, `c=10`) | **`475,00 s` (`7,92 min`)** | $10 \times 47,50\text{ s} = 475,0\text{ s} = \mathbf{7,92\text{ min}}$ (incluyendo particionador, SQS y reintentos DynamoDB). |
+
+### 4.4. Unificación y Conciliación de las Cifras Económicas (`0,0158 USD/M`, `0,1890 USD`, `0,2483 USD` y `0,25–0,31 USD/M`)
+
+Para evitar cualquier confusión entre el **costo unitario por millón (`USD/M`)** y el **costo total por lote (`1,2M` vs. `12M`)**, la tabla siguiente concilia en un único cuadro las cifras económicas de todas las etapas del proyecto:
+
+| Escenario Económico | Naturaleza | Tamaño del Lote | Cómputo Lambda Arm64 | S3 + SQS + DynamoDB + Operación | **Costo Total del Lote** | **Costo Unitario (`USD/M`)** | Explicación Coherente |
+| :--- | :---: | :---: | ---: | ---: | ---: | ---: | :--- |
+| **1. Estimado Teórico Previo (Diseño E01/E02 con $k=400$)** | Estimado pre-ejecución | `1.200.000` (`240` chunks) | `0,0691 USD` (`~5.184 GB-s`) | `0,2309 USD` (con holgura operativa inicial) | **`~0,3000 USD`** | **`0,25 – 0,31 USD/M`** | Estimación inicial en `ADR-003` y `RNF-03` (`P-06`) antes de medir $k$ en AWS, asumiendo `12,50 s/chunk` ($k=400$). |
+| **2. Corrida Real en AWS Learner Lab (`LOTE-COIL-1200K`)** | **Medido en AWS** | `1.200.000` (`240` chunks) | **`0,0067 USD`** (`505,37 GB-s` reales) | **`0,0122 USD`** (`S3` `0,0025` + `DDB` `0,0012` + `SQS` `0,0002` + `CW/Athena` `0,0083`) | **`0,0189 USD`** | **`0,0158 USD/M`** | **Costo real medido**: $\frac{0,0189\text{ USD}}{1,2\text{ M}} = \mathbf{0,0158\text{ USD/M}}$ (16x menor que el estimado previo gracias a $k=4.710,44$). |
+| **3. Escalamiento Lineal Directo `10×` (`12M`)** | Proyectado lineal puro | `12.000.000` (`2.400` chunks) | **`0,0674 USD`** (`5.053,7 GB-s`) | **`0,1216 USD`** (`10 ×` solicitudes S3, SQS, DynamoDB y CloudWatch) | **`0,1890 USD`** | **`0,0158 USD/M`** | Multiplicación directa $10 \times 0,0189\text{ USD}$ de exactamente los mismos servicios ejecutados en el prototipo. |
+| **4. Producción Completa `12M` con Operación** | **Proyectado producción** | `12.000.000` (`2.400` chunks) | **`0,0587 USD`** (`2.400` chunks $\times 1,0616\text{ s}$) | **`0,1896 USD`** (añade retención S3 30 días, compactación diaria Iceberg/Athena y API Gateway) | **`0,2483 USD`** (`~0,25 USD/lote`) | **`0,0207 USD/M`** | **`0,2483 USD` (`~0,25 USD`) es el costo del lote diario completo de 12 millones**, equivalente a **`0,0207 USD por millón`** ($\frac{0,2483}{12}$). |
+
 ---
 
 ## 5. Conclusiones e Índice Maestro de Entregables
@@ -472,7 +522,11 @@ La tabla Iceberg `saom_analytics.adjudicaciones` consolidó las **`1.200.000` ó
    - **Entregable 01 (v2 corregida)**: [`entregables/E01/Entregable_01_Propuesta_Arquitectura_Salud_COIL_v2.docx`](../E01/Entregable_01_Propuesta_Arquitectura_Salud_COIL_v2.docx)
    - **Entregable 02 (Diseño Técnico Simplificado)**: [`entregables/E02/Entregable_02_Diseno_Tecnico_Salud_COIL.docx`](../E02/Entregable_02_Diseno_Tecnico_Salud_COIL.docx)
    - **Entregable 03 (Prototipo en AWS y Evidencias)**: [`entregables/E03/Entregable_03_Prototipo_Evidencia_Salud_COIL.docx`](../E03/Entregable_03_Prototipo_Evidencia_Salud_COIL.docx)
-   - **Entregable 04 (Documento Consolidado + Guion de Pitch)**: [`entregables/E04/Entregable_04_Documento_Consolidado_Salud_COIL.docx`](Entregable_04_Documento_Consolidado_Salud_COIL.docx) y [`entregables/E04/Entregable_04_Guion_Pitch_Sustentacion_COIL.docx`](Entregable_04_Guion_Pitch_Sustentacion_COIL.docx)
+   - **Entregable 04 (Documento Consolidado + Presentación `.pptx` + Guion Pitch + Guía Demo)**:
+     - [`entregables/E04/Entregable_04_Documento_Consolidado_Salud_COIL.docx`](Entregable_04_Documento_Consolidado_Salud_COIL.docx)
+     - [`entregables/E04/Entregable_04_Presentacion_Ejecutiva_Salud_COIL.pptx`](Entregable_04_Presentacion_Ejecutiva_Salud_COIL.pptx)
+     - [`entregables/E04/Entregable_04_Guion_Pitch_Sustentacion_COIL.docx`](Entregable_04_Guion_Pitch_Sustentacion_COIL.docx)
+     - [`entregables/E04/Entregable_04_Guia_Demostracion_Comite.docx`](Entregable_04_Guia_Demostracion_Comite.docx)
    - **Bitácora COIL**: [`docs/bitacora/bitacora_decisiones.md`](../../docs/bitacora/bitacora_decisiones.md)
 """
 
@@ -482,7 +536,8 @@ def construir_e04_pitch_markdown() -> str:
 
 | Campo | Detalle |
 | :--- | :--- |
-| **Duración total** | **10 minutos** de presentación + sesión de preguntas del jurado |
+| **Duración total** | **10 minutos** de presentación + sesión de preguntas y demostración ante el jurado |
+| **Presentación Editable** | [`Entregable_04_Presentacion_Ejecutiva_Salud_COIL.pptx`](Entregable_04_Presentacion_Ejecutiva_Salud_COIL.pptx) (`10` diapositivas 16:9 con diagramas, capturas AWS y notas de orador) |
 | **Expositores** | **Naomi Chow** (Minutos 0:00–3:20) · **Daniel Lopez** (Minutos 3:20–6:50) · **María Fernanda Toro** (Minutos 6:50–10:00) |
 | **Demostración en vivo / Evidencia** | Cuenta AWS `329771219583` (`us-east-1`), corrida real de `1.200.000` órdenes en `47,50 s` y tabla Iceberg en Amazon Athena |
 
@@ -497,11 +552,11 @@ def construir_e04_pitch_markdown() -> str:
 | **3** | Metodología AI-DLC y Requisitos Verificables (`RF` + `RNF`) | **Naomi Chow** | `2:10 – 3:20` | Trazabilidad en 6 pasos con aprobación por etapa: metas del enunciado vs. metas del equipo (`F1 >= 0,92`, `<= 0,50 USD/M`, `0` PII). |
 | **4** | Arquitectura Híbrida Serverless por Micro-Lotes (Vista Simplificada) | **Daniel Lopez** | `3:20 – 4:40` | Diagrama `e02_arquitectura_simplificada.png`: S3 Raw → SQS → Particionador por rangos de bytes (`5.000` órd/chunk) → SQS → Workers Lambda `arm64` (`1.769 MB`). |
 | **5** | Idempotencia Atómica en DynamoDB y Lección Aprendida en AWS | **Daniel Lopez** | `4:40 – 5:45` | `TransactWriteItems` en `control_lotes` (`PK=LOTE#<id>, SK=CHUNK#<n>`) y hallazgo real: reintento con *exponential backoff* ante `TransactionConflict` en `META`. |
-| **6** | Resultados Reales en AWS Learner Lab (`1.200.000` Solicitudes) | **Daniel Lopez** | `5:45 – 6:50` | **`240/240` chunks en `47,50 s`**, $k_{\text{AWS-E2E}} = 4.710,44\text{ órd/s/vCPU}$, `153 MB` RAM, **`0,0189 USD`** totales (`0,0158 USD/M`) y `1.200.000` filas en Apache Iceberg + Athena. |
+| **6** | Resultados Reales en AWS Learner Lab (`1.200.000` Solicitudes) | **Daniel Lopez** | `5:45 – 6:50` | **`240/240` chunks en `47,50 s`**, $k_{\text{AWS-E2E}} = 4.710,44\text{ órd/s/vCPU}$, `153 MB` RAM, **`0,0189 USD`** totales (**`0,0158 USD/M`**) y `1.200.000` filas en Apache Iceberg + Athena. |
 | **7** | Pipeline Interno del Worker: Privacidad PII y Liquidación `Decimal` | **María Fernanda Toro** | `6:50 – 7:55` | Diagrama `e02_pipeline_worker.png`: `HMAC-SHA256` + enmascaramiento `#` que conserva la longitud exacta de la glosa y los spans `[start_char, end_char]`, más cálculo `Decimal` sin `float`. |
 | **8** | Calidad de Extracción Clínica (`Macro-F1 = 0,9886`) | **María Fernanda Toro** | `7:55 – 8:45` | Muestra de 600 glosas fuera de git (`300` limpias con `F1 = 1,0000` + `300` perturbadas en 6 categorías con `F1 = 0,9765` → **`Macro-F1 = 0,9886 >= 0,92`**). |
 | **9** | No Repudio Criptográfico de 3 Niveles (`SHA-256`) y Analítica Athena | **María Fernanda Toro** | `8:45 – 9:30` | Verificación desde `saom_analytics.adjudicaciones` en Athena: `hash_decision` → `raiz_hash_chunk` → `raiz_hash_lote` (`100 % OK`) y `57.328.903.464,00` aprobados. |
-| **10** | Extrapolación $M/M/c$ a 12M, FinOps y Cierre | **Equipo (Cierre)** | `9:30 – 10:00` | Con $k = 4.710,44$, 10 workers procesan 12M de órdenes en `4,25 min` por **`0,25 USD/día`** (**99,99 %** de ahorro frente a auditoría manual). |
+| **10** | Extrapolación a 12M (Medido vs. Proyectado), Conciliación FinOps y Cierre | **Equipo (Cierre)** | `9:30 – 10:00` | Drenaje puro de 12M en **`4,25 min`** ($\frac{2.400 \times 1,0616\text{ s}}{10}$) y **`7,92 min` E2E** ($10 \times 47,50\text{ s}$); costo unitario medido **`0,0158 USD/M`** y lote completo de 12M por **`0,1890 USD` lineal** / **`0,2483 USD` con operación** (`0,0207 USD/M`). |
 
 ---
 
@@ -525,7 +580,7 @@ def construir_e04_pitch_markdown() -> str:
 - **[Diapositiva 5 · `4:40–5:45`]**:
   > *"Para garantizar tolerancia a fallos e idempotencia (`RNF-06`), cada worker escribe con claves deterministas en S3 y ejecuta una transacción atómica `TransactWriteItems` en DynamoDB `control_lotes` con la condición `attribute_not_exists(SK) OR estado <> COMPLETADO`. En la prueba en vivo `LOTE-T3-INTEGRACION`, procesamos 10.001 órdenes con una fila corrupta (`CHV-9999999`) en 4,83 segundos: la fila corrupta quedó aislada en `rechazos/` con cero PII y, al reenviar intencionalmente el chunk 0, DynamoDB ignoró el duplicado sin alterar un solo centavo de `META`. Además, al correr los 240 chunks en paralelo en AWS descubrimos que cuando varios workers actualizan el contador `META` en el mismo milisegundo ocurre un `TransactionConflict`; implementamos reintento con exponential backoff distinguiendo conflictos transitorios de duplicados reales."*
 - **[Diapositiva 6 · `5:45–6:50`]**:
-  > *"Con ese mecanismo corrimos en nuestra cuenta del Learner Lab (`329771219583`) el dataset oficial completo de 1.200.000 solicitudes (`LOTE-COIL-1200K`). Los 240 chunks terminaron en **47,50 segundos** de reloj con cero mensajes en la DLQ. Según los registros `REPORT` de CloudWatch, cada chunk de 5.000 órdenes tardó en promedio **1.061,60 milisegundos** extremo a extremo, lo que arroja un throughput real en la nube de **4.710,44 órdenes por segundo por vCPU** y un consumo máximo de memoria de apenas **153 MB**. Toda la corrida de 1,2 millones de órdenes consumió `505,37 GB-s`, costando **0,0067 dólares en Lambda** y **0,0189 dólares en total** (`0,0158 USD por millón`). Finalmente, consolidamos las 1.200.000 filas en Apache Iceberg con `MERGE INTO` desde Amazon Athena verificando cero duplicados.Continúa María Fernanda con el núcleo clínico, F1 y trazabilidad."*
+  > *"Con ese mecanismo corrimos en nuestra cuenta del Learner Lab (`329771219583`) el dataset oficial completo de 1.200.000 solicitudes (`LOTE-COIL-1200K`). Los 240 chunks terminaron en **47,50 segundos** de reloj con cero mensajes en la DLQ. Según los registros `REPORT` de CloudWatch, cada chunk de 5.000 órdenes tardó en promedio **1.061,60 milisegundos** extremo a extremo, lo que arroja un throughput real en la nube de **4.710,44 órdenes por segundo por vCPU** y un consumo máximo de memoria de apenas **153 MB**. Toda la corrida de 1,2 millones de órdenes consumió `505,37 GB-s`, costando **0,0067 dólares en Lambda** y **0,0189 dólares en total**, es decir **0,0158 USD por millón**. Finalmente, consolidamos las 1.200.000 filas en Apache Iceberg con `MERGE INTO` desde Amazon Athena verificando cero duplicados. Continúa María Fernanda con el núcleo clínico, F1 y trazabilidad."*
 
 ---
 
@@ -538,7 +593,7 @@ def construir_e04_pitch_markdown() -> str:
 - **[Diapositiva 9 · `8:45–9:30`]**:
   > *"En trazabilidad (`RNF-04`), implementamos una cadena SHA-256 de tres niveles: cada orden se firma sobre su JSON canónico (`hash_decision`), cada chunk concatena los hashes ordenados por `id_solicitud` (`raiz_hash_chunk`) y el cierre del lote genera `raiz_hash_lote` en el manifiesto WORM de `saom-audit`. Desde Amazon Athena consultamos las 1.200.000 órdenes en Iceberg —que suman `1,58 billones` reclamados y `57.328 millones` aprobados en los tres días del lote— y comprobamos los tres niveles criptográficos de punta a punta."*
 - **[Diapositiva 10 · `9:30–10:00`]**:
-  > *"En conclusión, al introducir el throughput real medido en AWS ($k = 4.710,44\text{ órdenes/s/vCPU}$) en nuestro modelo de colas $M/M/c$, procesar los 12 millones de órdenes de la licitación toma apenas **4,25 minutos** con 10 workers y cuesta **0,25 dólares por lote diario**, cumpliendo todos los requisitos funcionales y no funcionales con 36 pruebas automatizadas y evidencia real en AWS. Muchas gracias; quedamos atentos a sus preguntas."*
+  > *"Para cerrar, diferenciamos con rigor lo medido de lo proyectado hacia los 12 millones de órdenes (`2.400` chunks). Como cada chunk tomó `1,0616 segundos` en CloudWatch, el tiempo de drenaje puro de cómputo de 2.400 chunks entre 10 workers es `2.400 × 1,0616 / 10 = 254,8 segundos`, es decir **4,25 minutos**; y si incluimos la sobrecarga de colas, particionador y reintentos escalando los `47,50 segundos` medidos por diez, el tiempo total de reloj proyectado es de **7,92 minutos**, frente a la meta de 3 horas. En costos, pasamos de una estimación teórica previa de diseño de `0,25 a 0,31 USD por millón` (cuando asumíamos `k = 400`) a un **costo real medido de `0,0158 USD por millón`** (`0,0189 USD` en el lote de 1,2M), lo que proyecta **`0,1890 USD` en escalamiento lineal directo** o **`0,2483 USD` por el lote completo de 12 millones** incluyendo retención S3 y compactación Iceberg (`0,0207 USD por millón`). Muchas gracias; tenemos abiertas las consolas de Athena, DynamoDB y CloudWatch para cualquier comprobación en vivo."*
 
 ---
 
@@ -550,6 +605,112 @@ def construir_e04_pitch_markdown() -> str:
 | **2. ¿Cómo garantizan que el enmascaramiento de PII no desplace los spans `[start_char, end_char]`?** | En `extraer_y_pseudonimizar_glosa()` (`prototype/saom_core.py`), los valores de `Paciente`, `DNO` y `SeguroSocial` se sustituyen carácter por carácter por `'#' * len(valor)`. Como la longitud en caracteres antes y después de cada `;` permanece invariante, cualquier índice `glosa[start_char:end_char]` apunta exactamente a la misma subcadena clínica, lo cual está verificado en `test_t1_spans_iguales_en_glosa_original_y_enmascarada`. |
 | **3. ¿Qué ocurrió en DynamoDB cuando corrieron los 240 chunks en paralelo en AWS?** | Los 10 workers concurrentes intentaban actualizar atómicamente su registro `CHUNK#` y sumar al contador único `META` del lote mediante `TransactWriteItems`. En 6 de los 240 chunks coincidieron dos escrituras en el mismo milisegundo sobre `META`, generando `TransactionConflict`. Inspeccionamos `CancellationReasons` para distinguir `ConditionalCheckFailed` (chunk duplicado ya procesado, que se ignora) de `TransactionConflict` (contención transitoria en `META`, que se reintenta con *exponential backoff* + *jitter*), logrando `240/240` chunks exactos en `47,50 s`. |
 | **4. ¿Cómo resolvieron la restricción de S3 Object Lock en el Learner Lab?** | La sonda `verify-r01` detectó que `LabRole` deniega `s3:PutObjectLockConfiguration` al crear el bucket. Se activó automáticamente la contingencia definida en `ADR-003` y `ADR-005`: **S3 Versioning + Bucket Policy `DenyDeleteAuditReceipts`** (que bloquea `s3:DeleteObject` y `s3:DeleteObjectVersion` sobre `recibos/*`) combinada con la verificación criptográfica SHA-256 de tres niveles (`hash_decision` → `raiz_hash_chunk` → `raiz_hash_lote`). |
+| **5. ¿Cómo se concilian las cifras de `0,0158 USD/M`, `0,2483 USD` y `0,25 USD/M`?** | Corresponden a tres escenarios claramente diferenciados: **1)** `0,25 a 0,31 USD por millón` fue la **estimación teórica previa de diseño** (`E01/E02`) antes de ejecutar en AWS, cuando asumíamos conservadoramente $k=400\text{ órd/s/vCPU}$ (`12,5 s/chunk`). **2)** **`0,0158 USD por millón`** es el **costo unitario real medido en AWS** en la corrida de 1,2M (`0,0189 USD / 1,2M`), que al escalar linealmente por 10 da **`0,1890 USD` para un lote de 12M**. **3)** **`0,2483 USD`** (aprox. `0,25 USD` por lote diario) no es un costo por millón, sino el **costo del lote completo de 12 millones en producción** incluyendo retención mensual en S3 y compactación diaria de Iceberg/Athena, lo que equivale a **`0,0207 USD por millón`** (`0,2483 / 12`). |
+| **6. ¿De dónde salen los `4,25 minutos` para 12 millones y qué diferencia hay entre el tiempo medido y el proyectado?** | En la corrida real de 1,2M (`240` chunks con 10 workers), medimos dos tiempos: **a)** la duración media de un chunk en un worker Lambda según CloudWatch (`1,0616 s`, equivalente a $k = 4.710,44\text{ órd/s/vCPU}$ y `25,48 s` de drenaje puro para 240 chunks) y **b)** el tiempo total de reloj extremo a extremo (`47,50 s`, que añade particionador, colas SQS y *backoff* en DynamoDB). Al proyectar a 12 millones (`2.400` chunks con 10 workers): el **tiempo de drenaje puro de cómputo en workers** es $\frac{2.400 \times 1,0616\text{ s}}{10} = 254,78\text{ s} = \mathbf{4,25\text{ minutos}}$, mientras que el **tiempo de reloj extremo a extremo proyectado** (incluyendo sobrecarga de colas y coordinación) es $10 \times 47,50\text{ s} = 475,0\text{ s} = \mathbf{7,92\text{ minutos}}$. Ambos están muy por debajo de la meta de 3 horas (`180 min`). |
+"""
+
+
+def construir_e04_guia_demo_markdown() -> str:
+    return r"""# Entregable 04: Guía Operativa de Demostración en Vivo ante el Comité Evaluador
+
+| Campo | Detalle |
+| :--- | :--- |
+| **Objetivo** | Comprobar en tiempo real (o mediante evidencia certificada si la sesión del Learner Lab está cerrada) los resultados en **Amazon DynamoDB**, **Amazon Athena (Apache Iceberg)** y **Amazon CloudWatch / AWS Lambda** |
+| **Cuenta AWS** | `329771219583` (`us-east-1`, rol `LabRole`, usuario `daniel_lopez`) |
+| **Tiempo estimado de demo** | **2 a 3 minutos** durante la sesión de preguntas del comité |
+
+---
+
+## 1. Preparación Previa (10 Minutos antes de la Sustentación)
+
+1. Iniciar sesión en **AWS Academy Learner Lab** y pulsar **Start Lab** (esperar a que el círculo de `AWS` pase a verde).
+2. Dejar abiertas **3 pestañas en el navegador** en la región **`us-east-1` (N. Virginia)**:
+   - **Pestaña 1 — Amazon DynamoDB**: `DynamoDB` → `Explore items` → tabla **`control_lotes`**.
+   - **Pestaña 2 — Amazon Athena**: `Athena` → `Query editor` → `Database: saom_analytics`.
+   - **Pestaña 3 — AWS Lambda / CloudWatch**: `Lambda` → `Functions` → **`saom-worker`** → pestaña **`Monitor`**.
+3. Si se desea ejecutar un comando desde la terminal local, actualizar las credenciales temporales en `C:\Users\danie\.aws\credentials` copiando el bloque de `AWS Details` → `AWS CLI: Show`.
+
+---
+
+## 2. Paso 1 de la Demo (45 s) — Comprobación del Lote `LOTE-COIL-1200K` en Amazon DynamoDB
+
+En la **Pestaña 1 (`DynamoDB` → `control_lotes` → `Explore items`)**:
+1. Seleccionar **Query**.
+2. En **Partition key (`PK`)**, ingresar:
+   ```text
+   LOTE#LOTE-COIL-1200K
+   ```
+3. En **Sort key (`SK`)**, seleccionar `Equal to` e ingresar:
+   ```text
+   META
+   ```
+4. Pulsar **Run** y mostrar al comité la fila devuelta:
+   - `estado = PROCESADO`
+   - `chunks_completados = 240` y `chunks_totales = 240`
+   - `ordenes_validas = 1200000` y `ordenes_rechazadas = 0`
+   - `suma_reclamada = 1583859890309.00` y `suma_aprobada = 57328903464.00`
+   - `raiz_hash_lote = 78dbff2ea6b365f3399315b1377111bc3ec23939ce539a101378b3f8b648869e`
+
+![Respaldo visual de DynamoDB META](../../docs/verificacion/screenshots/aws_dynamodb_lote_coil_1200k_meta.png)
+
+---
+
+## 3. Paso 2 de la Demo (60 s) — Consultas Analíticas en Vivo en Amazon Athena (`Apache Iceberg`)
+
+En la **Pestaña 2 (`Amazon Athena` → `Database: saom_analytics`)**, pegar y ejecutar cualquiera de las tres consultas siguientes según lo solicite el jurado:
+
+### Consulta A — Verificar las `1.200.000` órdenes consolidadas sin duplicados (`RNF-06`)
+```sql
+SELECT
+    COUNT(*) AS total_filas_iceberg,
+    COUNT(DISTINCT id_solicitud) AS solicitudes_unicas,
+    SUM(valor_procedimiento) AS total_reclamado,
+    SUM(valor_aprobado) AS total_aprobado
+FROM saom_analytics.adjudicaciones;
+```
+- **Resultado esperado (`~1,7 s`)**: `total_filas_iceberg = 1200000`, `solicitudes_unicas = 1200000`, `total_reclamado = 1583859890309.00`, `total_aprobado = 57328903464.00`.
+
+### Consulta B — Liquidación agregada por Día de Solicitud y Medio Emisor (`ADR-005`)
+```sql
+SELECT
+    SUBSTR(fecha_solicitud, 1, 10) AS dia_solicitud,
+    COUNT(*) AS ordenes,
+    SUM(valor_procedimiento) AS suma_reclamada,
+    SUM(valor_aprobado) AS suma_aprobada
+FROM saom_analytics.adjudicaciones
+GROUP BY SUBSTR(fecha_solicitud, 1, 10)
+ORDER BY dia_solicitud;
+```
+- **Resultado esperado**: `2026-05-04` (`402.000` órd., `19.155.939.616,75` aprobados), `2026-05-05` (`396.000` órd., `18.950.939.658,50` aprobados), `2026-05-06` (`402.000` órd., `19.222.024.188,75` aprobados).
+
+### Consulta C — Inspeccionar una orden individual con `patient_token` (0 PII) y `hash_decision` (`RNF-04`, `RNF-05`)
+```sql
+SELECT
+    id_solicitud,
+    patient_token,
+    perfil_cobertura,
+    servicio_codigo,
+    dictamen,
+    porcentaje_aplicado,
+    valor_procedimiento,
+    valor_aprobado,
+    hash_decision
+FROM saom_analytics.adjudicaciones
+WHERE id_solicitud IN ('CHV-0000001', 'CHV-0000002', 'CHV-0000003', 'CHV-0000004', 'CHV-0000005')
+ORDER BY id_solicitud;
+```
+
+![Respaldo visual de Amazon Athena](../../docs/verificacion/screenshots/aws_athena_iceberg_1200k.png)
+
+---
+
+## 4. Paso 3 de la Demo (45 s) — Telemetría y Rendimiento en CloudWatch / AWS Lambda
+
+En la **Pestaña 3 (`AWS Lambda` → `saom-worker` → `Monitor`)**:
+1. Mostrar las gráficas de **Invocations** (`261` invocaciones totales entre `T3`, `T4` y pruebas de reenvío), **Duration** (`Average ~1.061 ms`, `Minimum 431 ms`, `Maximum 1.484 ms`), **Error count and success rate** (`0 errors`, `100 % success rate`) y **Total concurrent executions** (pico exacto en `10` workers según `MaximumConcurrency = 10`).
+2. Si el jurado desea ver los logs detallados o las métricas EMF (`ThroughputOrdenesPorSegundo`), abrir **View CloudWatch logs** → `/aws/lambda/saom-worker` y mostrar las líneas `REPORT` con `Memory Size: 1769 MB` y `Max Memory Used: 153 MB`.
+
+![Respaldo visual de CloudWatch Metrics en AWS Lambda](../../docs/verificacion/screenshots/aws_lambda_saom_worker_metrics.png)
 """
 
 
@@ -593,6 +754,18 @@ def main() -> None:
         subtitle="Presentación Ejecutiva y Demostración en AWS — Equipo de Arquitectura COIL",
     )
 
+    # 4. Generar E04 Guía Operativa de Demostración ante el Comité (.md y .docx)
+    md_e04_demo = construir_e04_guia_demo_markdown()
+    e04_demo_md_path = E04_DIR / "Entregable_04_Guia_Demostracion_Comite.md"
+    e04_demo_docx_path = E04_DIR / "Entregable_04_Guia_Demostracion_Comite.docx"
+    e04_demo_md_path.write_text(md_e04_demo, encoding="utf-8")
+    render_markdown_to_docx(
+        md_text=md_e04_demo,
+        docx_path=e04_demo_docx_path,
+        title="Entregable 04: Guía Operativa de Demostración en Vivo (AWS Console)",
+        subtitle="Consultas SQL en Amazon Athena, Estado en DynamoDB y Métricas en CloudWatch",
+    )
+
     print("Entregables E03 y E04 generados exitosamente:")
     for p in (
         e03_md_path,
@@ -601,6 +774,8 @@ def main() -> None:
         e04_doc_docx_path,
         e04_pitch_md_path,
         e04_pitch_docx_path,
+        e04_demo_md_path,
+        e04_demo_docx_path,
     ):
         print(f" - {p} ({p.stat().st_size:,} bytes)")
 

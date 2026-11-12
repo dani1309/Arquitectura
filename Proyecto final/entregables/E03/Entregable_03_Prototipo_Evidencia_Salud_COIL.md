@@ -123,14 +123,40 @@ Siguiendo el protocolo de [`docs/verificacion/T5a_protocolo_etiquetado_y_spans.m
 | `Medicacion` | `1,0000` | `0,9737` | 1.359 | 0 | 35 | 1,0000 | 0,9749 | **0,9873** |
 | **Promedio Macro** | **1,0000** | **0,9765** | — | — | — | **1,0000** | **0,9776** | **0,9886** ($\ge 0,92$) |
 
-### 5.2. Dimensionamiento $M/M/c$ y Costo Proyectado para 12 Millones de Órdenes (`RNF-01` y `RNF-03`)
+### 5.2. Diferenciación entre Rendimiento Medido (`1,2M`) y Proyectado (`12M`) — Derivación de los `4,25 min` y `7,92 min`
 
-| Escenario (12.000.000 de órdenes · 2.400 chunks) | $\lambda$ (órd/s) | $k$ (órd/s/vCPU) | $N$ workers ($M/M/c$) | Utilización $\rho$ | $W_q$ en cola | Tiempo de drenaje con `c=10` | Costo Total Nube (12M) | Costo por Millón |
-| :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| **Hipótesis Conservadora `P-07` — Ventana 24 h** | 138,89 | 400,00 | **1** | 0,3472 | 6,649 s | 50,0 min | 0,8806 USD | 0,0734 USD/M |
-| **Hipótesis Conservadora `P-07` — Ventana 3 h** | 1.111,11 | 400,00 | **4** (`c=10` con 2,5x) | 0,6944 | 4,296 s | 50,0 min | 0,8806 USD | 0,0734 USD/M |
-| **Con $k$ Real AWS CloudWatch — Ventana 24 h** | 138,89 | **4.710,44** | **1** | 0,0295 | 0,032 s | **4,25 min** | **0,2483 USD** | **0,0207 USD/M** |
-| **Con $k$ Real AWS CloudWatch — Ventana 3 h** | 1.111,11 | **4.710,44** | **1** (`c=10` configurado) | 0,2359 | 0,328 s | **4,25 min** | **0,2483 USD** | **0,0207 USD/M** |
+Para distinguir con rigor qué se midió empíricamente en la cuenta `329771219583` y qué se proyecta hacia los `12.000.000` de órdenes (`2.400` chunks de `5.000` órdenes), se desglosan las dos métricas temporales:
+
+1. **Rendimiento Medido en AWS (`1.200.000` órdenes · `240` chunks · `c = 10` workers)**:
+   - **Duración media E2E por chunk en CloudWatch (`REPORT Duration`)**: $T_{\text{chunk}} = 1.061,60\text{ ms} = 1,0616\text{ s}$, lo que determina un throughput unitario real por worker ($1\text{ vCPU}$) de:
+     $$k_{\text{AWS-E2E}} = \frac{5.000\text{ órdenes}}{1,0616\text{ s}} = 4.710,44\text{ órdenes/s/vCPU}$$
+   - **Tiempo de drenaje puro de cómputo en los 10 workers (`240` chunks)**: $\frac{240 \times 1,0616\text{ s}}{10} = 25,48\text{ s}$.
+   - **Tiempo de reloj extremo a extremo medido (`wall-clock`)**: **`47,50 s` (`0,79 min`)**, que suma los `25,48 s` de drenaje puro más `3,40 s` de particionamiento en streaming y `18,62 s` de *cold starts*, *polling* de SQS y *exponential backoff* en los 6 chunks con `TransactionConflict` en DynamoDB.
+2. **Rendimiento Proyectado para `12.000.000` de Órdenes (`2.400` chunks · `c = 10` workers)**:
+   - **De dónde salen los `4,25 minutos` (Tiempo de drenaje puro de cómputo en workers)**:
+     $$T_{\text{drenaje, 12M}} = \frac{N_{\text{chunks}} \times T_{\text{chunk}}}{c} = \frac{2.400\text{ chunks} \times 1,0616\text{ s/chunk}}{10\text{ workers}} = \frac{2.547,84\text{ s}}{10} = 254,78\text{ s} = \mathbf{4,25\text{ minutos}}$$
+     *(Equivalente a dividir $12.000.000\text{ órdenes}$ entre la capacidad agregada de los 10 workers: $10 \times 4.710,44 = 47.104,4\text{ órdenes/s}$).*
+   - **Tiempo de reloj extremo a extremo proyectado incluyendo sobrecarga de coordinación (`7,92 minutos`)**:
+     $$T_{\text{reloj, 12M}} = 10 \times T_{\text{reloj, 1.2M}} = 10 \times 47,50\text{ s} = 475,0\text{ s} = \mathbf{7,92\text{ minutos}}$$
+   - Tanto el tiempo de drenaje puro (**`4,25 min`**) como el tiempo de reloj extremo a extremo (**`7,92 min`**) procesan los 12 millones de órdenes en **menos de 8 minutos**, cumpliendo con amplísimo margen la meta interna del equipo ($\le 3\text{ h} = 180\text{ min}$) y el SLA de la licitación ($< 24\text{ h}$).
+
+| Escenario (12.000.000 de órdenes · 2.400 chunks) | $\lambda$ (órd/s) | $k$ (órd/s/vCPU) | $N$ workers ($M/M/c$) | Utilización $\rho$ | $W_q$ en cola | Drenaje puro (`c=10`) | Reloj E2E proyectado (`c=10`) | Costo Lote Completo (12M) | Costo Unitario por Millón |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| **Hipótesis Conservadora `P-07` — Ventana 24 h** | 138,89 | 400,00 | **1** | 0,3472 | 6,649 s | 50,00 min | ~55,00 min | 0,8806 USD | 0,0734 USD/M |
+| **Hipótesis Conservadora `P-07` — Ventana 3 h** | 1.111,11 | 400,00 | **4** (`c=10` con 2,5x) | 0,6944 | 4,296 s | 50,00 min | ~55,00 min | 0,8806 USD | 0,0734 USD/M |
+| **Con $k$ Medido en AWS — Ventana 24 h** | 138,89 | **4.710,44** | **1** | 0,0295 | 0,032 s | **4,25 min** | **7,92 min** | **0,2483 USD** (`0,1890` lineal) | **0,0207 USD/M** (`0,0158` lineal) |
+| **Con $k$ Medido en AWS — Ventana 3 h** | 1.111,11 | **4.710,44** | **1** (`c=10` configurado) | 0,2359 | 0,328 s | **4,25 min** | **7,92 min** | **0,2483 USD** (`0,1890` lineal) | **0,0207 USD/M** (`0,0158` lineal) |
+
+### 5.3. Conciliación y Unificación de las Cifras Económicas (`0,0158 USD/M`, `0,2483 USD` y `0,25–0,31 USD/M`)
+
+Para evitar cualquier confusión entre el **costo unitario por millón de órdenes (`USD/M`)** y el **costo del lote completo (`1,2M` vs. `12M`)**, la tabla siguiente concilia los cuatro valores económicos del proyecto:
+
+| Escenario Económico | Tipo de Cifra | Volumen del Lote | Cómputo Lambda Arm64 | S3 + SQS + DynamoDB + Operación | **Costo Total del Lote** | **Costo Unitario (`USD/M`)** | Explicación Coherente |
+| :--- | :---: | :---: | ---: | ---: | ---: | ---: | :--- |
+| **1. Estimado Previo de Diseño (E01/E02 con $k=400$)** | Estimado pre-ejecución | `1.200.000` (`240` chunks) | `0,0691 USD` (`~5.184 GB-s`) | `0,2309 USD` (con holgura operativa inicial) | **`~0,3000 USD`** | **`0,25 – 0,31 USD/M`** | Estimación teórica inicial en `ADR-003` y `RNF-03` (`P-06`) antes de medir $k$ en AWS, asumiendo `12,50 s/chunk` ($k=400$). |
+| **2. Corrida Real en AWS Learner Lab (`LOTE-COIL-1200K`)** | **Medido en AWS** | `1.200.000` (`240` chunks) | **`0,0067 USD`** (`505,37 GB-s` reales) | **`0,0122 USD`** (`S3` `0,0025` + `DDB` `0,0012` + `SQS` `0,0002` + `CW/Athena` `0,0083`) | **`0,0189 USD`** | **`0,0158 USD/M`** | **Costo real medido**: $\frac{0,0189\text{ USD}}{1,2\text{ M}} = \mathbf{0,0158\text{ USD/M}}$ (16x menor que el estimado previo gracias a $k=4.710,44$). |
+| **3. Escalamiento Lineal Directo `10×` (`12M`)** | Proyectado lineal puro | `12.000.000` (`2.400` chunks) | **`0,0674 USD`** (`5.053,7 GB-s`) | **`0,1216 USD`** (`10 ×` solicitudes S3, SQS, DynamoDB y CloudWatch) | **`0,1890 USD`** | **`0,0158 USD/M`** | Multiplicación directa $10 \times 0,0189\text{ USD}$ de exactamente los mismos servicios del prototipo. |
+| **4. Producción Completa `12M` con Operación** | **Proyectado producción** | `12.000.000` (`2.400` chunks) | **`0,0587 USD`** (`2.400` chunks $\times 1,0616\text{ s}$) | **`0,1896 USD`** (añade retención S3 30 días, compactación Iceberg/Athena y API Gateway) | **`0,2483 USD`** (`~0,25 USD/lote`) | **`0,0207 USD/M`** | **`0,2483 USD` (`~0,25 USD`) es el costo del lote completo de 12 millones**, equivalente a **`0,0207 USD por millón`** ($\frac{0,2483}{12}$). |
 
 ---
 

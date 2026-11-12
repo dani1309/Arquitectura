@@ -47,7 +47,7 @@ Proyecto final/
     ├── E01/                      # Entregable_01_Propuesta_Arquitectura_Salud_COIL_v2.docx (52 citas verificadas)
     ├── E02/                      # Entregable_02_Diseno_Tecnico_Salud_COIL.docx + .md
     ├── E03/                      # Entregable_03_Prototipo_Evidencia_Salud_COIL.docx + .md
-    └── E04/                      # Entregable_04_Documento_Consolidado_Salud_COIL.docx + Guion Pitch
+    └── E04/                      # Consolidado (.docx), Presentación Ejecutiva (.pptx), Guion Pitch (.docx) y Guía Demo (.docx)
 ```
 
 El dataset `COIL_dataset_glosas_salud_1_2M.csv` (~360 MB) y la muestra de 600 glosas de `T5a` no se versionan: `.gitignore` los excluye en cualquier ruta. Cada integrante los mantiene fuera de git y su SHA-256 está en la [bitácora](docs/bitacora/bitacora_decisiones.md).
@@ -72,4 +72,4 @@ Cada entregable vale el 25 % del curso. Las descripciones son las del enunciado.
 | E01 · Documento de propuesta | Problema, estado del arte, objetivos, metodología y análisis económico | Formato Word editable (`.docx`) | [entregables/E01/](entregables/E01/) | **Completado** (`v2` con citas `[1]..[52]` y precios AWS verificados) |
 | E02 · Diseño técnico | Arquitectura distribuida, flujo de datos, lógica y estrategia de costo | Diagramas simplificados + justificación (`.docx` y `.md`) | [entregables/E02/](entregables/E02/) y [docs/design/](docs/design/) | **Completado** |
 | E03 · Implementación | Prototipo funcional en AWS, pruebas, evidencia y alcance implementado | Código, corrida real 1,2M en AWS y resultados (`.docx` y `.md`) | [entregables/E03/](entregables/E03/), [prototype/](prototype/) y [docs/verificacion/](docs/verificacion/) | **Completado** |
-| E04 · Presentación final | Documento consolidado y defensa ejecutiva ante comité evaluador | Documento consolidado + Guion de Pitch de 10 min (`.docx` y `.md`) | [entregables/E04/](entregables/E04/) | **Completado** |
+| E04 · Presentación final | Documento consolidado y defensa ejecutiva ante comité evaluador | Presentación 10 diapositivas (`.pptx`), Documento Consolidado, Guion Pitch y Guía Demo (`.docx` y `.md`) | [entregables/E04/](entregables/E04/) | **Completado** |

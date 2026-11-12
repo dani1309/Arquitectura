@@ -87,6 +87,30 @@ La tabla Iceberg `saom_analytics.adjudicaciones` consolidó las **`1.200.000` ó
 #### Evidencia en AWS Console: Consulta SQL SELECT COUNT en Amazon Athena
 ![Evidencia en Amazon Athena: Consulta SELECT COUNT a la tabla Iceberg adjudicaciones](../../docs/verificacion/screenshots/aws_athena_iceberg_1200k.png)
 
+### 4.3. Justificación de la Extrapolación a 12 Millones: Rendimiento Medido (`1,2M`) vs. Proyectado (`12M`)
+
+Para distinguir con absoluta precisión qué se midió en vivo en AWS (`1.200.000` órdenes = `240` chunks) y cómo se proyecta el comportamiento para el lote completo de la licitación (`12.000.000` de órdenes = `2.400` chunks de `5.000` órdenes con `c = 10` workers), se presenta la derivación paso a paso:
+
+| Métrica | Naturaleza | Escala | Valor | Derivación / Origen |
+| :--- | :---: | :---: | ---: | :--- |
+| **Duración media por chunk ($T_{\text{chunk}}$)** | **Medido (CloudWatch)** | 1 chunk (`5.000` órd.) | **`1.061,60 ms`** (`1,0616 s`) | Promedio de `REPORT Duration` en `saom-worker` (`1.769 MB` = `1 vCPU`). |
+| **Throughput unitario E2E ($k_{\text{AWS-E2E}}$)** | **Medido (CloudWatch)** | 1 worker (`1 vCPU`) | **`4.710,44 órd/s/vCPU`** | $k_{\text{AWS-E2E}} = \frac{5.000\text{ órd.}}{1,0616\text{ s}} = 4.710,44\text{ órd/s/vCPU}$. |
+| **Tiempo de drenaje puro de cómputo (`1,2M`)** | **Medido (CloudWatch)** | `1,2M` (`240` chunks, `c=10`) | **`25,48 s`** (`0,42 min`) | $\frac{240\text{ chunks} \times 1,0616\text{ s}}{10\text{ workers}} = 25,48\text{ s}$ de trabajo efectivo en workers. |
+| **Tiempo de reloj extremo a extremo (`1,2M`)** | **Medido (Reloj E2E)** | `1,2M` (`240` chunks, `c=10`) | **`47,50 s`** (`0,79 min`) | Incluye los `25,48 s` de drenaje + `3,40 s` del particionador + `18,62 s` de *cold starts*, colas SQS y *backoff* en 6 chunks con `TransactionConflict`. |
+| **Tiempo de drenaje puro de cómputo (`12M`)** | **Proyectado ($M/M/c$)** | `12M` (`2.400` chunks, `c=10`) | **`254,78 s` (`4,25 min`)** | $\frac{2.400\text{ chunks} \times 1,0616\text{ s}}{10\text{ workers}} = \frac{12.000.000\text{ órd.}}{47.104,4\text{ órd/s}} = 254,78\text{ s} = \mathbf{4,25\text{ min}}$. |
+| **Tiempo de reloj extremo a extremo (`12M`)** | **Proyectado (Lineal E2E)** | `12M` (`2.400` chunks, `c=10`) | **`475,00 s` (`7,92 min`)** | $10 \times 47,50\text{ s} = 475,0\text{ s} = \mathbf{7,92\text{ min}}$ (incluyendo particionador, SQS y reintentos DynamoDB). |
+
+### 4.4. Unificación y Conciliación de las Cifras Económicas (`0,0158 USD/M`, `0,1890 USD`, `0,2483 USD` y `0,25–0,31 USD/M`)
+
+Para evitar cualquier confusión entre el **costo unitario por millón (`USD/M`)** y el **costo total por lote (`1,2M` vs. `12M`)**, la tabla siguiente concilia en un único cuadro las cifras económicas de todas las etapas del proyecto:
+
+| Escenario Económico | Naturaleza | Tamaño del Lote | Cómputo Lambda Arm64 | S3 + SQS + DynamoDB + Operación | **Costo Total del Lote** | **Costo Unitario (`USD/M`)** | Explicación Coherente |
+| :--- | :---: | :---: | ---: | ---: | ---: | ---: | :--- |
+| **1. Estimado Teórico Previo (Diseño E01/E02 con $k=400$)** | Estimado pre-ejecución | `1.200.000` (`240` chunks) | `0,0691 USD` (`~5.184 GB-s`) | `0,2309 USD` (con holgura operativa inicial) | **`~0,3000 USD`** | **`0,25 – 0,31 USD/M`** | Estimación inicial en `ADR-003` y `RNF-03` (`P-06`) antes de medir $k$ en AWS, asumiendo `12,50 s/chunk` ($k=400$). |
+| **2. Corrida Real en AWS Learner Lab (`LOTE-COIL-1200K`)** | **Medido en AWS** | `1.200.000` (`240` chunks) | **`0,0067 USD`** (`505,37 GB-s` reales) | **`0,0122 USD`** (`S3` `0,0025` + `DDB` `0,0012` + `SQS` `0,0002` + `CW/Athena` `0,0083`) | **`0,0189 USD`** | **`0,0158 USD/M`** | **Costo real medido**: $\frac{0,0189\text{ USD}}{1,2\text{ M}} = \mathbf{0,0158\text{ USD/M}}$ (16x menor que el estimado previo gracias a $k=4.710,44$). |
+| **3. Escalamiento Lineal Directo `10×` (`12M`)** | Proyectado lineal puro | `12.000.000` (`2.400` chunks) | **`0,0674 USD`** (`5.053,7 GB-s`) | **`0,1216 USD`** (`10 ×` solicitudes S3, SQS, DynamoDB y CloudWatch) | **`0,1890 USD`** | **`0,0158 USD/M`** | Multiplicación directa $10 \times 0,0189\text{ USD}$ de exactamente los mismos servicios ejecutados en el prototipo. |
+| **4. Producción Completa `12M` con Operación** | **Proyectado producción** | `12.000.000` (`2.400` chunks) | **`0,0587 USD`** (`2.400` chunks $\times 1,0616\text{ s}$) | **`0,1896 USD`** (añade retención S3 30 días, compactación diaria Iceberg/Athena y API Gateway) | **`0,2483 USD`** (`~0,25 USD/lote`) | **`0,0207 USD/M`** | **`0,2483 USD` (`~0,25 USD`) es el costo del lote diario completo de 12 millones**, equivalente a **`0,0207 USD por millón`** ($\frac{0,2483}{12}$). |
+
 ---
 
 ## 5. Conclusiones e Índice Maestro de Entregables
@@ -96,5 +120,9 @@ La tabla Iceberg `saom_analytics.adjudicaciones` consolidó las **`1.200.000` ó
    - **Entregable 01 (v2 corregida)**: [`entregables/E01/Entregable_01_Propuesta_Arquitectura_Salud_COIL_v2.docx`](../E01/Entregable_01_Propuesta_Arquitectura_Salud_COIL_v2.docx)
    - **Entregable 02 (Diseño Técnico Simplificado)**: [`entregables/E02/Entregable_02_Diseno_Tecnico_Salud_COIL.docx`](../E02/Entregable_02_Diseno_Tecnico_Salud_COIL.docx)
    - **Entregable 03 (Prototipo en AWS y Evidencias)**: [`entregables/E03/Entregable_03_Prototipo_Evidencia_Salud_COIL.docx`](../E03/Entregable_03_Prototipo_Evidencia_Salud_COIL.docx)
-   - **Entregable 04 (Documento Consolidado + Guion de Pitch)**: [`entregables/E04/Entregable_04_Documento_Consolidado_Salud_COIL.docx`](Entregable_04_Documento_Consolidado_Salud_COIL.docx) y [`entregables/E04/Entregable_04_Guion_Pitch_Sustentacion_COIL.docx`](Entregable_04_Guion_Pitch_Sustentacion_COIL.docx)
+   - **Entregable 04 (Documento Consolidado + Presentación `.pptx` + Guion Pitch + Guía Demo)**:
+     - [`entregables/E04/Entregable_04_Documento_Consolidado_Salud_COIL.docx`](Entregable_04_Documento_Consolidado_Salud_COIL.docx)
+     - [`entregables/E04/Entregable_04_Presentacion_Ejecutiva_Salud_COIL.pptx`](Entregable_04_Presentacion_Ejecutiva_Salud_COIL.pptx)
+     - [`entregables/E04/Entregable_04_Guion_Pitch_Sustentacion_COIL.docx`](Entregable_04_Guion_Pitch_Sustentacion_COIL.docx)
+     - [`entregables/E04/Entregable_04_Guia_Demostracion_Comite.docx`](Entregable_04_Guia_Demostracion_Comite.docx)
    - **Bitácora COIL**: [`docs/bitacora/bitacora_decisiones.md`](../../docs/bitacora/bitacora_decisiones.md)
